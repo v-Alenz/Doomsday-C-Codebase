@@ -16,8 +16,8 @@
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
 
-#define DOOMSDAY_C_STRING_IMPLEMENTATION
-#define DOOMSDAY_C_STRING_STRIP_PREFIX
+/* #define DOOMSDAY_C_STRING_IMPLEMENTATION */
+/* #define DOOMSDAY_C_STRING_STRIP_PREFIX */
 
 /*****************************************************************************/
 /* DOOMSDAY C STRING                                                         */
@@ -401,9 +401,6 @@ char * doom_string_strtok_r( char * restrict str, char const * restrict delim,
                                                   char ** restrict saveptr) {
     return strtok_r(str, delim, saveptr);
 }
-
-
-
 
 #endif /* DOOMSDAY_C_STRING_IMPLEMENTATION */
 
