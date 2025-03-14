@@ -16,8 +16,8 @@
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
 
-/* #define DOOMSDAY_C_STRING_IMPLEMENTATION */
-/* #define DOOMSDAY_C_STRING_STRIP_PREFIX */
+#define DOOMSDAY_C_STRING_IMPLEMENTATION
+#define DOOMSDAY_C_STRING_STRIP_PREFIX
 
 /*****************************************************************************/
 /* DOOMSDAY C STRING                                                         */
@@ -42,10 +42,12 @@
 typedef struct doomsday_c_string_t {
     char * _char_array;
     int64_t * _size;
-} doom_string;
+} doom_string_struct;
+
+typedef char * doom_string ;
 
 
-int     doom_string_to_struct( doom_string * doom_str, char * string);
+int     doom_string_get_struct( doom_string_struct * doom_str, char * string);
 void *  doom_string_base_pointer( char * string );
 int     doom_string_init( char ** string );
 int     doom_string_init_s ( char ** string, size_t const size );
@@ -83,7 +85,7 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 #ifndef DOOMSDAY_C_STRING_STRIP_BARRIER
 #define DOOMSDAY_C_STRING_STRIP_BARRIER
 
-#define string_to_struct doom_string_to_struct
+#define string_to_struct doom_string_get_struct
 #define string_base_pointer doom_string_base_pointer
 #define string_init doom_string_init
 #define string_init_s doom_string_init_s
@@ -122,8 +124,9 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 /* DOOMSDAY C STRING IMPLEMENTATIN                                           */
 /*****************************************************************************/
 #ifdef DOOMSDAY_C_STRING_IMPLEMENTATION
+#define DOOMSBAY_C_STRING_USE_IMPLEMENTATION
 
-int doom_string_to_struct(doom_string *doom_str, char *string) {
+int doom_string_get_struct(doom_string_struct *doom_str, char *string) {
     if (doom_str == NULL || string == NULL) {
         return -1;
     } 
@@ -141,7 +144,7 @@ void * doom_string_base_pointer( char * string ) {
 
 int doom_string_init( char ** string ) {
     void * alloc_ptr = NULL;
-    doom_string doom_str;
+    doom_string_struct doom_str;
     memset(&doom_str, 0, sizeof(doom_str));
     alloc_ptr = ALLOCATOR(sizeof(char) + sizeof(int64_t));
     if (alloc_ptr == NULL) {
@@ -159,7 +162,7 @@ int doom_string_init( char ** string ) {
 
 int doom_string_init_s ( char ** string, size_t const size ) {
     void * alloc_ptr = NULL;
-    doom_string doom_str;
+    doom_string_struct doom_str;
     memset(&doom_str, 0, sizeof(doom_str));
     alloc_ptr = ALLOCATOR((sizeof(char)*size+1) + sizeof(int64_t));
     if (alloc_ptr == NULL) {
@@ -176,8 +179,11 @@ int doom_string_init_s ( char ** string, size_t const size ) {
 }
 
 int doom_string_init_c ( char ** string, char const * restrict c_string ) {
+    if (c_string == NULL) {
+        return -2;
+    }
     void * alloc_ptr = NULL;
-    doom_string doom_str;
+    doom_string_struct doom_str;
     size_t c_string_size = strlen(c_string);
     memset(&doom_str, 0, sizeof(doom_str));
     alloc_ptr = ALLOCATOR((sizeof(char)*c_string_size+1) + sizeof(int64_t));
@@ -209,21 +215,27 @@ void doom_string_deinit( char * string ) {
 
 char * doom_string_get( void ) {
     char * aux_str = NULL; 
-    doom_string_init(&aux_str);
+    if((doom_string_init(&aux_str)) != 0) {
+        return NULL;
+    }
     
     return aux_str;
 }
 
 char * doom_string_get_s( size_t const size ) {
     char * aux_str = NULL; 
-    doom_string_init_s(&aux_str, size);
+    if((doom_string_init_s(&aux_str, size)) != 0) {
+        return NULL;
+    }
     
     return aux_str;
 }
 
 char * doom_string_get_c ( char const * restrict c_string ) {
     char * aux_str = NULL; 
-    doom_string_init_c(&aux_str, c_string);
+    if((doom_string_init_c(&aux_str, c_string)) != 0) {
+        return NULL;
+    }
     
     return aux_str;
 }
@@ -232,6 +244,9 @@ int doom_string_resize( char ** string, size_t const size ) {
     if (string == NULL) {
         return -1;
     } 
+    if (*string == NULL) {
+        return -2;
+    }
     char * aux_str = doom_string_get_s(size);
     int64_t aux_len = doom_string_get_max_size(*string);
     memcpy(aux_str, *string, (aux_len < size) ? aux_len : size);
@@ -245,8 +260,11 @@ int doom_string_safe_resize( char ** string, size_t const size ) {
     if (string == NULL) {
         return -1;
     } 
-    if (size <= strlen(*string)) {
+    if (*string == NULL) {
         return -2;
+    }
+    if (size <= strlen(*string)) {
+        return -3;
     }
 
     doom_string_resize(string, size);
@@ -257,9 +275,11 @@ int doom_string_fit( char ** string ) {
     if (string == NULL) {
         return -1;
     }
+    if (*string == NULL) {
+        return -2;
+    }
 
-    doom_string_resize(string, strlen(*string));
-    return 0;
+    return doom_string_resize(string, strlen(*string));
 }
 
 int64_t doom_string_get_max_size( char const * string ) {
@@ -271,10 +291,10 @@ int64_t doom_string_get_max_size( char const * string ) {
 }
 
 char * doom_string_stpcpy( char ** dst, char const * restrict src ) {
-    if (dst == NULL || src == NULL) {
+    if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
     } 
-    if (doom_string_get_max_size(*dst) > doom_string_strlen(*dst)) {
+    if (doom_string_get_max_size(*dst) < doom_string_strlen(src)) {
         doom_string_resize(dst, doom_string_strlen(src));
     }
 
@@ -282,7 +302,7 @@ char * doom_string_stpcpy( char ** dst, char const * restrict src ) {
 }
 
 char * doom_string_strcat( char ** dst, char const * restrict src ) {
-    if (dst == NULL || src == NULL) {
+    if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
     }
     if (doom_string_get_max_size(*dst) < 
@@ -333,7 +353,7 @@ int doom_string_strcoll_l( char const * s1, char const * s2,
 }
 
 char * doom_string_strcpy( char ** dst, char const * restrict src ) {
-    if (dst == NULL || src == NULL) {
+    if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
     } 
     if (doom_string_get_max_size(*dst) < doom_string_strlen(src)) {
@@ -356,9 +376,6 @@ char * doom_string_strdup( char const * s ) {
 }
 
 size_t doom_string_strlen( char const * s ) {
-    /* If s is a doom_string this is always ok
-     * otherwise is not less safe than regular strlen
-     */
     if (s == NULL) {
         return 0;
     }
