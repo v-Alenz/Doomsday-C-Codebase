@@ -1,3 +1,21 @@
+/******************************************************************************/
+/* DoomsDay C                                                                 */
+/* Copyright (C) 2025 - v-Alenz                                               */
+/*                                                                            */
+/* This program is free software: you can redistribute it and/or modify       */
+/* it under the terms of the GNU Affero General Public License as published by*/
+/* the Free Software Foundation, either version 3 of the License, or          */
+/* (at your option) any later version.                                        */
+/*                                                                            */
+/* This program is distributed in the hope that it will be useful,            */
+/* but WITHOUT ANY WARRANTY; without even the implied warranty of             */
+/* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              */
+/* GNU Affero General Public License for more details.                        */
+/*                                                                            */
+/* You should have received a copy of the GNU Affero General Public License   */
+/* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
+/******************************************************************************/
+
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -9,6 +27,8 @@
 
 int main( void ) {
     
+    /* disabling stdout buffer to not trigger memory allocaion on printf */
+    setbuf(stdout, NULL);
     printf("+------------------------------------------------+\n");
     printf("| Doomsday C Testing                             |\n");
     printf("+------------------------------------------------+\n");
@@ -142,6 +162,7 @@ int main( void ) {
     assert((doom_string_stpcpy(&test_string, "Test String")) != NULL);
     assert(strcmp(test_string, "Test String") == 0);
     assert(doom_string_get_max_size(test_string) == 11);
+    doom_string_deinit(test_string);
 
     printf(" - doom_string_strcat\n");
     assert((doom_string_stpcpy( NULL, NULL)) ==  NULL);
@@ -151,6 +172,7 @@ int main( void ) {
     assert((doom_string_strcat(&test_string, " Concatenation")) != NULL);
     assert(strcmp(test_string, "Test String Concatenation") == 0);
     assert(doom_string_get_max_size(test_string) == 25);
+    doom_string_deinit(test_string);
 
     printf(" - doom_string_strchr\n");
 

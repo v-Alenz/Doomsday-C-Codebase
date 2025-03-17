@@ -1,6 +1,6 @@
 /******************************************************************************/
 /* DoomsDay C                                                                 */
-/* Copyright (C) 2025 - v_Alenz                                               */
+/* Copyright (C) 2025 - v-Alenz                                               */
 /*                                                                            */
 /* This program is free software: you can redistribute it and/or modify       */
 /* it under the terms of the GNU Affero General Public License as published by*/
@@ -46,7 +46,7 @@ typedef struct doomsday_c_string_t {
 
 typedef char * doom_string ;
 
-
+/* basic functionality */
 int     doom_string_get_struct( doom_string_struct * doom_str, char * string);
 void *  doom_string_base_pointer( char * string );
 int     doom_string_init( char ** string );
@@ -60,6 +60,7 @@ int     doom_string_resize( char ** string, size_t const size );
 int     doom_string_safe_resize( char ** string, size_t const size );
 int     doom_string_fit( char ** string );
 int64_t doom_string_get_max_size( char const * string );
+/* string.h funcitons weappers */
 char *  doom_string_stpcpy( char ** dst, char const * restrict src );
 char *  doom_string_strcat( char ** dst, char const * restrict src );
 char *  doom_string_strchr( char * dst, int c );
@@ -117,14 +118,14 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 #endif /* DOOMSDAY_C_STRING_STRIP_BARRIER */
 #endif /* DOOMSDAY_C_STRING_STRIP_PREFIX */
 
-#endif /* DOOMSDAY_C_STRING_H */
 
 
 /*****************************************************************************/
 /* DOOMSDAY C STRING IMPLEMENTATIN                                           */
 /*****************************************************************************/
 #ifdef DOOMSDAY_C_STRING_IMPLEMENTATION
-#define DOOMSBAY_C_STRING_USE_IMPLEMENTATION
+#ifndef DOOMSDAY_C_STRING_IMPLEMENTATION_BARRIER
+#define DOOMSDAY_C_STRING_IMPLEMENTATION_BARRIER
 
 int doom_string_get_struct(doom_string_struct *doom_str, char *string) {
     if (doom_str == NULL || string == NULL) {
@@ -210,7 +211,6 @@ void doom_string_deinit( char * string ) {
         return;
     }
     DEALLOCATOR(aux_ptr);
-    aux_ptr = NULL;
 }
 
 char * doom_string_get( void ) {
@@ -419,5 +419,7 @@ char * doom_string_strtok_r( char * restrict str, char const * restrict delim,
     return strtok_r(str, delim, saveptr);
 }
 
+#endif /* DOOMSDAY_C_STRING_IMPLEMENTATION_BARRIER */
 #endif /* DOOMSDAY_C_STRING_IMPLEMENTATION */
 
+#endif /* DOOMSDAY_C_STRING_H */
