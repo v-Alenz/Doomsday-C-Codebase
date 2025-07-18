@@ -215,12 +215,14 @@ int main( void ) {
 
 
     /* TESTS - Doomsday C Dynamic Array */
+    int32_t int_aux;
+    int32_t * int_ptr;
     int32_t * int_dynamic_array;
     void ** int_dynamic_array_ptr = (void **)(&int_dynamic_array);
     doom_string * doom_string_dynamic_array;
     void ** doom_string_dynamic_array_ptr = (void **)(&doom_string_dynamic_array);
     doom_dynamic_array_struct dynamic_array_struct;
-    printf("\nDoomsday C Dynamic Array:\n");
+    printf("Doomsday C Dynamic Array:\n");
 
     DOOM_TEST_CASE(" - doom_dynamic_array_get_struct\n");
     DOOM_ASSERT(doom_dynamic_array_get_struct(NULL, NULL) == -1);
@@ -340,12 +342,139 @@ int main( void ) {
     }
 
     DOOM_TEST_CASE(" - doom_dynamic_array_fit\n");
+    DOOM_ASSERT(doom_dynamic_array_resize(int_dynamic_array_ptr, 10) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 40);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<5; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    DOOM_ASSERT(doom_dynamic_array_fit(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<5; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
 
     DOOM_TEST_CASE(" - doom_dynamic_array_reserve\n");
     DOOM_ASSERT(doom_dynamic_array_reserve(int_dynamic_array_ptr, 120) == 0);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
-    DOOM_ASSERT(*dynamic_array_struct._array_size == 40);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 10);
     DOOM_ASSERT(*dynamic_array_struct._array_max_size == 120);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<5; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    doom_dynamic_array_deinit(*int_dynamic_array_ptr);
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_back\n");
+    *int_dynamic_array_ptr = NULL;
+    DOOM_ASSERT(doom_dynamic_array_back(*int_dynamic_array_ptr) == NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT(doom_dynamic_array_back(*int_dynamic_array_ptr) == NULL);
+    doom_dynamic_array_deinit(*int_dynamic_array_ptr);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_ptr = (int32_t *) doom_dynamic_array_back((void *) int_dynamic_array)) != NULL);
+    DOOM_ASSERT(*int_ptr == 5);
+    doom_dynamic_array_deinit(*int_dynamic_array_ptr);
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_push_back\n");
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 5);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<5; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    int_aux = 6;
+    DOOM_ASSERT(doom_dynamic_array_push_back(int_dynamic_array_ptr, &int_aux) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 6);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<6; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    DOOM_ASSERT(doom_dynamic_array_fit(int_dynamic_array_ptr) == 0);
+    int_aux = 7;
+    DOOM_ASSERT(doom_dynamic_array_push_back(int_dynamic_array_ptr, &int_aux) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 7);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 12);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<7; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_pop_back\n");
+    DOOM_ASSERT(doom_dynamic_array_pop_back(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 6);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 12);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<6; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    DOOM_ASSERT(doom_dynamic_array_pop_back(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_fit(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 5);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 5);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<5; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i+1);
+    }
+    doom_dynamic_array_deinit(*int_dynamic_array_ptr);
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_front\n");
+    *int_dynamic_array_ptr = NULL;
+    DOOM_ASSERT(doom_dynamic_array_front(*int_dynamic_array_ptr) == NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT(doom_dynamic_array_front(*int_dynamic_array_ptr) == NULL);
+    doom_dynamic_array_deinit(*int_dynamic_array_ptr);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_ptr = (int32_t *) doom_dynamic_array_front((void *) int_dynamic_array)) != NULL);
+    DOOM_ASSERT(*int_ptr == 1);
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_push_front\n");
+    int_aux = 0;
+    DOOM_ASSERT(doom_dynamic_array_push_front(int_dynamic_array_ptr, &int_aux) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 6);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<6; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i);
+    }
+    DOOM_ASSERT(doom_dynamic_array_fit(int_dynamic_array_ptr) == 0);
+    int_aux = -1;
+    DOOM_ASSERT(doom_dynamic_array_push_front(int_dynamic_array_ptr, &int_aux) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 7);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 12);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<7; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i-1);
+    }
+
+    DOOM_TEST_CASE(" - doom_dynamic_array_pop_front\n");
+    DOOM_ASSERT(doom_dynamic_array_pop_front(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 6);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 12);
+    DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
+    for (int i=0; i<6; i++) {
+        DOOM_ASSERT(int_dynamic_array[i] == i);
+    }
+    DOOM_ASSERT(doom_dynamic_array_pop_front(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_fit(int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
+    DOOM_ASSERT(*dynamic_array_struct._array_size == 5);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == 5);
     DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
     for (int i=0; i<5; i++) {
         DOOM_ASSERT(int_dynamic_array[i] == i+1);
