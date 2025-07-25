@@ -15,12 +15,12 @@
 /* You should have received a copy of the GNU Affero General Public License   */
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
-#define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
-#define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
-
 #ifndef DOOM_C_DYNAMIC_ARRAY_H
 #define DOOM_C_DYNAMIC_ARRAY_H
 
+// TODO: Debugging only: remove when implementation
+//       is provided in a separeted module
+#define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
 
 #include <stdint.h>
 #include <stdlib.h>
