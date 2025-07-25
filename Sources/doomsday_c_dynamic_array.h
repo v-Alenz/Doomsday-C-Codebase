@@ -44,12 +44,12 @@ typedef struct doomsday_c_dynamic_array_t {
     int64_t * _array_max_size;
 } doom_dynamic_array_struct;
 
-/* basic functionality */ 
+/* basic functionality */
 int doom_dynamic_array_get_struct( doom_dynamic_array_struct * da_struct, void * da );
 void * doom_dynamic_array_get_base_ptr( void * da );
 int doom_dynamic_array_init( void ** da , int64_t const sizeof_elem );
-int doom_dynamic_array_init_s( void ** da, int64_t const sizeof_elem, int64_t const size );
-int doom_dynamic_array_init_c( void ** da, int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
+int doom_dynamic_array_init_size( void ** da, int64_t const sizeof_elem, int64_t const size );
+int doom_dynamic_array_init_copy( void ** da, int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
 void * doom_dynamic_array_factory( int64_t const sizeof_elem );
 void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const size );
 void * doom_dynamic_array_factory_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
@@ -61,12 +61,12 @@ int doom_dynamic_array_expand( void ** da );
 int doom_dynamic_array_resize( void ** da, int64_t const size );
 int doom_dynamic_array_fit( void ** da );
 int doom_dynamic_array_reserve( void ** da, int64_t const size );
-/* stack and queue operations */
-void * doom_dynamic_array_back( void ** da );
+/* Stack and Queue operations */
+void * doom_dynamic_array_back( void const * restrict da );
 int doom_dynamic_array_push_back( void ** da, void const * restrict value );
 int doom_dynamic_array_pop_back( void ** da );
-void * doom_dynamic_array_front( void ** da );
-int doom_synamic_array_push_front( void ** da, void const * restrict value );
+void * doom_dynamic_array_front( void const * restrict da );
+int doom_dynamic_array_push_front( void ** da, void const * restrict value );
 int doom_dynamic_array_pop_front( void ** da );
 
 
@@ -77,8 +77,8 @@ int doom_dynamic_array_pop_front( void ** da );
 #define dynamic_array_get_struct doom_dynamic_array_get_struct
 #define dynamic_array_get_base_ptr doom_dynamic_array_get_base_ptr
 #define dynamic_array_init doom_dynamic_array_init
-#define dynamic_array_init_s doom_dynamic_array_init_s
-#define dynamic_array_init_c doom_dynamic_array_init_c
+#define dynamic_array_init_s doom_dynamic_array_init_size
+#define dynamic_array_init_c doom_dynamic_array_init_copy
 #define dynamic_array_deinit doom_dynamic_array_deinit
 #define dynamic_array_factory doom_dynamic_array_factory
 #define dynamic_array_factory_copy doom_dynamic_array_factory_copy
@@ -97,7 +97,7 @@ int doom_dynamic_array_pop_front( void ** da );
 #ifndef DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER
 #define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER
 
-int doom_dynamic_array_get_struct( doom_dynamic_array_struct * da_struct, void * da ) { 
+int doom_dynamic_array_get_struct( doom_dynamic_array_struct * da_struct, void * da ) {
     if (da_struct == NULL || da == NULL) {
         return -1;
     }
@@ -112,14 +112,14 @@ void * doom_dynamic_array_get_base_ptr( void * da ) {
     if (da == NULL) {
         return NULL;
     }
-    return ((int64_t *)da)-3; 
+    return ((int64_t *)da)-3;
 }
 
 int doom_dynamic_array_init( void ** da, int64_t sizeof_elem) {
     if (sizeof_elem <= 0) {
         return -2;
     }
-    void * alloc_ptr = NULL;     
+    void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
     alloc_ptr = ALLOCATOR(sizeof_elem*ARRAY_DEFAULT_SIZE + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
@@ -137,11 +137,11 @@ int doom_dynamic_array_init( void ** da, int64_t sizeof_elem) {
     return 0;
 }
 
-int doom_dynamic_array_init_s( void ** da, int64_t sizeof_elem, int64_t size ) {
+int doom_dynamic_array_init_size( void ** da, int64_t sizeof_elem, int64_t size ) {
     if (sizeof_elem <= 0 || size <= 0) {
         return -2;
     }
-    void * alloc_ptr = NULL;     
+    void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
     alloc_ptr = ALLOCATOR(sizeof_elem*size + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
@@ -153,17 +153,17 @@ int doom_dynamic_array_init_s( void ** da, int64_t sizeof_elem, int64_t size ) {
     da_struct._array = (byte *)(((int64_t *) alloc_ptr)+3);
 
     *da_struct._sizeof_elem = sizeof_elem;
-    *da_struct._array_size = 0;
+    *da_struct._array_size = size;
     *da_struct._array_max_size = size;
     *da = da_struct._array;
     return 0;
 }
 
-int doom_dynamic_array_init_c( void ** da, int64_t sizeof_elem, void const * restrict from, int64_t from_size ) {
+int doom_dynamic_array_init_copy( void ** da, int64_t sizeof_elem, void const * restrict from, int64_t from_size ) {
     if (sizeof_elem <= 0 || from_size <= 0 || from == NULL) {
         return -2;
     }
-    void * alloc_ptr = NULL;     
+    void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
     alloc_ptr = ALLOCATOR(sizeof_elem*from_size*2 + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
@@ -192,7 +192,7 @@ void * doom_dynamic_array_factory( int64_t const sizeof_elem ) {
 
 void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const size ) {
     byte * aux_da = NULL;
-    if(doom_dynamic_array_init_s((void **)&aux_da, sizeof_elem, size) != 0) {
+    if(doom_dynamic_array_init_size((void **)&aux_da, sizeof_elem, size) != 0) {
         return NULL;
     }
     return aux_da;
@@ -200,7 +200,7 @@ void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const
 
 void * doom_dynamic_array_factory_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size ) {
     byte * aux_da = NULL;
-    if(doom_dynamic_array_init_c((void **)&aux_da, sizeof_elem, from, from_size) != 0) {
+    if(doom_dynamic_array_init_copy((void **)&aux_da, sizeof_elem, from, from_size) != 0) {
         return NULL;
     }
     return aux_da;
@@ -209,7 +209,7 @@ void * doom_dynamic_array_factory_copy( int64_t const sizeof_elem, void const * 
 void doom_dynamic_array_deinit( void * da ) {
     if (da == NULL) {
         return;
-    } 
+    }
     void * base_ptr = doom_dynamic_array_get_base_ptr(da);
     if (base_ptr == NULL) {
         return;
@@ -221,21 +221,21 @@ int64_t doom_dynamic_array_get_elem_size( void const * restrict da ) {
     if (da == NULL) {
         return -1;
     }
-    return *(((int64_t *)da)-1); 
+    return *(((int64_t *)da)-1);
 }
 
 int64_t doom_dynamic_array_get_size( void const * restrict da ) {
     if (da == NULL) {
         return -1;
     }
-    return *(((int64_t *)da)-2); 
+    return *(((int64_t *)da)-2);
 }
 
 int64_t doom_dynamic_array_get_max_size( void const * restrict da ) {
     if (da == NULL) {
         return -1;
     }
-    return *(((int64_t *)da)-3); 
+    return *(((int64_t *)da)-3);
 }
 
 int doom_dynamic_array_expand( void ** da ) {
@@ -261,7 +261,7 @@ int doom_dynamic_array_expand( void ** da ) {
     *da_alloc_struct._array_size = *da_struct._array_size;
     doom_dynamic_array_deinit(*da);
     *da = da_alloc;
-    
+
     return 0;
 }
 
@@ -283,7 +283,7 @@ int doom_dynamic_array_resize( void ** da, int64_t const size ) {
 
     while (*da_struct._array_max_size < size) {
         if ((doom_dynamic_array_expand(da)) != 0) {
-            return -3;    
+            return -3;
         }
         if ((doom_dynamic_array_get_struct(&da_struct, *da)) != 0) {
             return -3;
@@ -292,12 +292,35 @@ int doom_dynamic_array_resize( void ** da, int64_t const size ) {
     *da_struct._array_size = size;
 
     return 0;
-}  
- 
+}
+
 int doom_dynamic_array_fit( void ** da ) {
-    return -1;
-}  
- 
+    if (da == NULL) {
+        return -1;
+    }
+
+    doom_dynamic_array_struct da_struct;
+    if ((doom_dynamic_array_get_struct(&da_struct, *da)) != 0) {
+        return -1;
+    }
+
+    if (*da_struct._array_max_size > *da_struct._array_size) {
+        void * da_alloc = doom_dynamic_array_factory_size(*da_struct._sizeof_elem, *da_struct._array_size);
+        if (da_alloc == NULL) {
+            return -2;
+        }
+        doom_dynamic_array_struct da_alloc_struct;
+        if ((doom_dynamic_array_get_struct(&da_alloc_struct, da_alloc)) != 0) {
+            return -2;
+        }
+        memcpy(da_alloc_struct._array, da_struct._array, *da_struct._array_size * *da_struct._sizeof_elem);
+        *da_alloc_struct._array_size = *da_struct._array_size;
+        doom_dynamic_array_deinit(*da);
+        *da = da_alloc;
+    }
+    return 0;
+}
+
 int doom_dynamic_array_reserve( void ** da, int64_t const size ) {
     if (da == NULL) {
         return -1;
@@ -330,9 +353,152 @@ int doom_dynamic_array_reserve( void ** da, int64_t const size ) {
     }
 
     return 0;
-}  
- 
- 
+}
+
+/* Stack and Queue operations */
+
+void * doom_dynamic_array_back( void const * restrict da ) {
+    if (da == NULL) {
+        return NULL;
+    }
+    
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct,(void *)da) != 0) {
+        return NULL;
+    }
+    
+    if (*da_struct._array_size == 0) {
+        return NULL;
+    }
+
+    return &(da_struct._array[(*da_struct._array_size-1) * (*da_struct._sizeof_elem)]);
+}
+
+int doom_dynamic_array_push_back( void ** da, void const * restrict value ) {
+    if (da == NULL || value == NULL) {
+        return -1;
+    }
+    if (*da == NULL) {
+        return -1;
+    }
+
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct, *da) != 0) {
+        return -1;
+    }
+
+    if (*da_struct._array_size == 0) {
+        return -2;
+    }
+
+    if (*da_struct._array_size+1 > *da_struct._array_max_size) {
+        if (doom_dynamic_array_expand(da) != 0) {
+            return -3;
+        }
+        if (doom_dynamic_array_get_struct(&da_struct, *da) != 0) {
+            return -1;
+        }
+    }
+
+    byte * pos = &(da_struct._array[(*da_struct._array_size) * (*da_struct._sizeof_elem)]);
+    memcpy(pos, value, *da_struct._sizeof_elem);
+    *da_struct._array_size += 1;
+
+    return 0;
+}
+
+int doom_dynamic_array_pop_back( void ** da ) {
+    if (da == NULL) {
+        return -1;
+    }
+
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct,*da) != 0) {
+        return -1;
+    }
+
+    if (*da_struct._array_size == 0) {
+        return -2;
+    }
+    
+    *da_struct._array_size-=1;
+
+    return 0;
+}
+
+void * doom_dynamic_array_front( void const * restrict da ) {
+    if (da == NULL) {
+        return NULL;
+    }
+    
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct,(void *)da) != 0) {
+        return NULL;
+    }
+    
+    if (*da_struct._array_size == 0) {
+        return NULL;
+    }
+
+    return da_struct._array;
+}
+
+int doom_dynamic_array_push_front( void ** da, void const * restrict value ) {
+    if (da == NULL || value == NULL) {
+        return -1;
+    }
+    if (*da == NULL) {
+        return -1;
+    }
+
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct, *da) != 0) {
+        return -1;
+    }
+
+    if (*da_struct._array_size == 0) {
+        return -2;
+    }
+
+    if (*da_struct._array_size+1 > *da_struct._array_max_size) {
+        if (doom_dynamic_array_expand(da) != 0) {
+            return -3;
+        }
+        if (doom_dynamic_array_get_struct(&da_struct, *da) != 0) {
+            return -1;
+        }
+    }
+
+    memmove(da_struct._array+(*da_struct._sizeof_elem), da_struct._array, 
+            (*da_struct._sizeof_elem) * (*da_struct._array_size));
+    memcpy(da_struct._array, value, *da_struct._sizeof_elem);
+    *da_struct._array_size += 1;
+
+    return 0;
+}
+
+int doom_dynamic_array_pop_front( void ** da ) {
+    if (da == NULL) {
+        return -1;
+    }
+
+    doom_dynamic_array_struct da_struct;
+    if (doom_dynamic_array_get_struct(&da_struct,*da) != 0) {
+        return -1;
+    }
+
+    if (*da_struct._array_size == 0) {
+        return -2;
+    }
+    
+    memmove(da_struct._array, da_struct._array+(*da_struct._sizeof_elem), 
+            (*da_struct._sizeof_elem) * (*da_struct._array_size));
+    *da_struct._array_size-=1;
+
+    return 0;
+}
+
+
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER */
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION */
 #endif /* DOOM_C_DYNAMIC_ARRAY_H */
