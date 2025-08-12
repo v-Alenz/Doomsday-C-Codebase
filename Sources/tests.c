@@ -26,9 +26,13 @@
 #define DOOMSDAY_C_STRING_STRIP_PREFIX
 #include "doomsday_c_string.h"
 /* Doomsday C Dynamic Array */
-#define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
 #define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
+#define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
 #include "doomsday_c_dynamic_array.h"
+/* Doomsday C List */
+#define DOOMSDAY_C_LIST_IMPLEMENTATION
+#define DOOMSDAY_C_LIST_STRIP_PREFIX
+#include "doomsday_c_list.h"
 
 
 #define DOOM_ASSERT(prop) do{assert(prop); asserts_count++;}while(0)
@@ -481,8 +485,175 @@ int main( void ) {
     }
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
 
+    /* Doom List Test */
+    printf("Doomsday C List:\n");
+    doom_list_node node;
+    memset(&node, 0, sizeof(doom_list_node));
+    doom_list_node * node_ptr;
+    node_ptr = NULL;
+    doom_list list;
+    memset(&list, 0, sizeof(doom_list));
+    doom_list * list_ptr;
+    list_ptr = NULL;
+
+    DOOM_TEST_CASE(" - doom_list_node_new\n");
+    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT(node_ptr->payload == NULL);
+    DOOM_ASSERT(node_ptr->next == NULL);
+    DOOM_ASSERT(node_ptr->prev == NULL);
+    doom_list_node_deinit(node_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_node_init\n");
+    node_ptr = NULL;
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double)) == -1);
+    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double)) == sizeof(double));
+    *((double *)node_ptr->payload) = 10.10;
+    DOOM_ASSERT((*(double *) node_ptr->payload) == 10.10);
+
+    DOOM_TEST_CASE(" - doom_list_node_deinit\n");
+    doom_list_node_deinit(node_ptr);
+
+
+    DOOM_TEST_CASE(" - doom_list_node_assign\n");
+    node_ptr = NULL;
+    int32_t aux_int = 6969;
+    DOOM_ASSERT(doom_list_node_assign(node_ptr, &aux_int, sizeof(int32_t)) == -1);
+    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(int32_t)) == sizeof(int32_t));
+    DOOM_ASSERT(doom_list_node_assign(node_ptr, NULL, sizeof(int32_t)) == -1);
+    DOOM_ASSERT(doom_list_node_assign(node_ptr, (void *)&aux_int, sizeof(int32_t)) == 0);
+    DOOM_ASSERT((*((int32_t *)node_ptr->payload)) == aux_int);
+    doom_list_node_deinit(node_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_node_get\n");
+    node_ptr = NULL;
+    float aux_float = 69.69f;
+    DOOM_ASSERT(doom_list_node_get(node_ptr) == NULL);
+    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT(doom_list_node_get(node_ptr) == NULL);
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(float)) == sizeof(float));
+    DOOM_ASSERT(doom_list_node_assign(node_ptr, (void *)&aux_float, sizeof(float)) == 0);
+    DOOM_ASSERT(*((float *)doom_list_node_get(node_ptr)) == aux_float);
+    doom_list_node_deinit(node_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_node_insert_after\n");
+
+    DOOM_TEST_CASE(" - doom_list_node_insert_before\n");
+
+    DOOM_TEST_CASE(" - doom_list_new\n");
+    DOOM_ASSERT((list_ptr = doom_list_new(sizeof(double))) != NULL);
+    DOOM_ASSERT(list_ptr->_size == 0);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(double));
+    DOOM_ASSERT(list_ptr->first == NULL);
+    DOOM_ASSERT(list_ptr->last == NULL);
+    doom_list_deinit(list_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_init\n");
+    list_ptr = NULL;
+    DOOM_ASSERT((doom_list_init(&list_ptr, sizeof(byte))) == 0);
+    DOOM_ASSERT(list_ptr->_size == 0);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(byte));
+    DOOM_ASSERT(list_ptr->first == NULL);
+    DOOM_ASSERT(list_ptr->last == NULL);
+    doom_list_deinit(list_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_push_front\n");
+    list_ptr = NULL;
+    DOOM_ASSERT((doom_list_push_front(NULL, NULL)) == -1);
+    DOOM_ASSERT((doom_list_push_front(list_ptr, (void *)&aux_int)) == -1);
+    DOOM_ASSERT((list_ptr = doom_list_new(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT((doom_list_push_front(list_ptr, NULL)) == -1);
+    DOOM_ASSERT((doom_list_push_front(list_ptr, &aux_int)) == 0);
+    DOOM_ASSERT(list_ptr->_size == 1);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(int32_t));
+    DOOM_ASSERT(list_ptr->first != NULL);
+    DOOM_ASSERT(list_ptr->last != NULL);
+    DOOM_ASSERT(list_ptr->first->prev == NULL);
+    DOOM_ASSERT(list_ptr->first->next == NULL);
+    DOOM_ASSERT((*(int32_t *)list_ptr->first->payload) == aux_int);
+    aux_int = 9696;
+    DOOM_ASSERT((doom_list_push_front(list_ptr, &aux_int)) == 0);
+    DOOM_ASSERT(list_ptr->_size == 2);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(int32_t));
+    DOOM_ASSERT(list_ptr->first != NULL);
+    DOOM_ASSERT(list_ptr->last != NULL);
+    DOOM_ASSERT(list_ptr->first->prev == NULL);
+    DOOM_ASSERT(list_ptr->first->next != NULL);
+    DOOM_ASSERT(list_ptr->first->next->prev != NULL);
+    DOOM_ASSERT(list_ptr->first->next->next == NULL);
+    DOOM_ASSERT((*(int32_t *)list_ptr->first->payload) == aux_int);
+
+    DOOM_TEST_CASE(" - doom_list_pop_front\n");
+    DOOM_ASSERT(doom_list_pop_front(NULL) == -1);
+    DOOM_ASSERT(doom_list_pop_front(list_ptr) == 0);
+    DOOM_ASSERT(list_ptr->first == list_ptr->last);
+    DOOM_ASSERT(list_ptr->_size == 1);
+    DOOM_ASSERT(doom_list_pop_front(list_ptr) == 0);
+    DOOM_ASSERT(list_ptr->first == NULL);
+    DOOM_ASSERT(list_ptr->last == NULL);
+    DOOM_ASSERT(list_ptr->_size == 0);
+    DOOM_ASSERT(doom_list_pop_front(list_ptr) == -1);
+    doom_list_deinit(list_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_push_back\n");
+    list_ptr = NULL;
+    DOOM_ASSERT((doom_list_push_back(NULL, NULL)) == -1);
+    DOOM_ASSERT((doom_list_push_back(list_ptr, (void *)&aux_int)) == -1);
+    DOOM_ASSERT((list_ptr = doom_list_new(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT((doom_list_push_back(list_ptr, NULL)) == -1);
+    DOOM_ASSERT((doom_list_push_back(list_ptr, &aux_int)) == 0);
+    DOOM_ASSERT(list_ptr->_size == 1);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(int32_t));
+    DOOM_ASSERT(list_ptr->first != NULL);
+    DOOM_ASSERT(list_ptr->last != NULL);
+    DOOM_ASSERT(list_ptr->last->prev == NULL);
+    DOOM_ASSERT(list_ptr->last->next == NULL);
+    DOOM_ASSERT((*(int32_t *)list_ptr->last->payload) == aux_int);
+    aux_int = 6969;
+    DOOM_ASSERT((doom_list_push_back(list_ptr, &aux_int)) == 0);
+    DOOM_ASSERT(list_ptr->_size == 2);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(int32_t));
+    DOOM_ASSERT(list_ptr->first != NULL);
+    DOOM_ASSERT(list_ptr->last != NULL);
+    DOOM_ASSERT(list_ptr->first->prev == NULL);
+    DOOM_ASSERT(list_ptr->first->next != NULL);
+    DOOM_ASSERT(list_ptr->first->next->prev != NULL);
+    DOOM_ASSERT(list_ptr->first->next->next == NULL);
+    DOOM_ASSERT((*(int32_t *)list_ptr->last->payload) == aux_int);
+
+    DOOM_TEST_CASE(" - doom_list_pop_back\n");
+    DOOM_ASSERT(doom_list_pop_back(NULL) == -1);
+    DOOM_ASSERT(doom_list_pop_back(list_ptr) == 0);
+    DOOM_ASSERT(list_ptr->first == list_ptr->last);
+    DOOM_ASSERT(list_ptr->_size == 1);
+    DOOM_ASSERT(doom_list_pop_back(list_ptr) == 0);
+    DOOM_ASSERT(list_ptr->first == NULL);
+    DOOM_ASSERT(list_ptr->last == NULL);
+    DOOM_ASSERT(list_ptr->_size == 0);
+    DOOM_ASSERT(doom_list_pop_back(list_ptr) == -1);
+    doom_list_deinit(list_ptr);
+
+    DOOM_TEST_CASE(" - doom_list_front\n");
+    DOOM_ASSERT((list_ptr = doom_list_new(sizeof(float))) != NULL);
+    DOOM_ASSERT((doom_list_push_front(list_ptr, &aux_float)) == 0);
+    DOOM_ASSERT(list_ptr->_size == 1);
+    DOOM_ASSERT(list_ptr->_data_size == sizeof(int32_t));
+    DOOM_ASSERT(list_ptr->first != NULL);
+    DOOM_ASSERT(list_ptr->last != NULL);
+    DOOM_ASSERT(list_ptr->first->prev == NULL);
+    DOOM_ASSERT(list_ptr->first->next == NULL);
+    DOOM_ASSERT((*(float *)list_ptr->first->payload) == aux_float);
+    DOOM_ASSERT(*(float *)doom_list_front(list_ptr) == aux_float);
+
+    DOOM_TEST_CASE(" - doom_list_back\n");
+    DOOM_ASSERT(*(float *)doom_list_back(list_ptr) == aux_float);
+
+    DOOM_TEST_CASE(" - doom_list_deinit\n");
+    doom_list_deinit(list_ptr);
+
     /* End of Testing */
-    printf("__________________________________________________\n");  
+    printf("__________________________________________________\n");
     printf("Tests Succeeded!\n");
     printf("Tested %lu assertions in %lu test cases!\n", asserts_count, test_cases_count);
     fflush(stdout);

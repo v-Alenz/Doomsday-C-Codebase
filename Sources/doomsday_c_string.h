@@ -46,6 +46,7 @@ typedef struct doomsday_c_string_t {
 
 typedef char * doom_string ;
 
+
 /* basic functionality */
 int     doom_string_get_struct( doom_string_struct * doom_str, char * string);
 void *  doom_string_base_pointer( char * string );
@@ -66,7 +67,7 @@ char *  doom_string_strcat( char ** dst, char const * restrict src );
 char *  doom_string_strchr( char * dst, int c );
 int     doom_string_strcmp( char const * s1, char const * s2 );
 int     doom_string_strcoll( char const * s1, char const * s2 );
-int     doom_string_strcoll_l( char const * s1, char const * s2, 
+int     doom_string_strcoll_l( char const * s1, char const * s2,
                                locale_t locale );
 char *  doom_string_strcpy( char ** dst, char const * restrict src );
 size_t  doom_string_strcspn( char const * s, char const * reject );
@@ -119,7 +120,6 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 #endif /* DOOMSDAY_C_STRING_STRIP_PREFIX */
 
 
-
 /*****************************************************************************/
 /* DOOMSDAY C STRING IMPLEMENTATIN                                           */
 /*****************************************************************************/
@@ -130,7 +130,7 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 int doom_string_get_struct(doom_string_struct *doom_str, char *string) {
     if (doom_str == NULL || string == NULL) {
         return -1;
-    } 
+    }
     doom_str->_char_array = string;
     doom_str->_size = ((int64_t *)string)-1;
     return 0;
@@ -156,7 +156,7 @@ int doom_string_init( char ** string ) {
 
     *doom_str._size = 0;
     *doom_str._char_array = 0;
-    
+
     *string = doom_str._char_array;
     return 0;
 }
@@ -171,7 +171,7 @@ int doom_string_init_size ( char ** string, size_t const size ) {
     }
     doom_str._size = (int64_t*)alloc_ptr;
     doom_str._char_array = (char*)(doom_str._size+1);
-    
+
     *doom_str._size = size;
     memset(doom_str._char_array, 0, *doom_str._size+1);
 
@@ -193,7 +193,7 @@ int doom_string_init_copy ( char ** string, char const * restrict c_string ) {
     }
     doom_str._size = (int64_t*)alloc_ptr;
     doom_str._char_array = (char*)(doom_str._size+1);
-    
+
     *doom_str._size = c_string_size;
     memset(doom_str._char_array, 0, *doom_str._size+1);
     memcpy(doom_str._char_array, c_string, *doom_str._size);
@@ -214,36 +214,36 @@ void doom_string_deinit( char * string ) {
 }
 
 char * doom_string_factory( void ) {
-    char * aux_str = NULL; 
+    char * aux_str = NULL;
     if((doom_string_init(&aux_str)) != 0) {
         return NULL;
     }
-    
+
     return aux_str;
 }
 
 char * doom_string_factory_size( size_t const size ) {
-    char * aux_str = NULL; 
+    char * aux_str = NULL;
     if((doom_string_init_size(&aux_str, size)) != 0) {
         return NULL;
     }
-    
+
     return aux_str;
 }
 
 char * doom_string_factory_copy ( char const * restrict c_string ) {
-    char * aux_str = NULL; 
+    char * aux_str = NULL;
     if((doom_string_init_copy(&aux_str, c_string)) != 0) {
         return NULL;
     }
-    
+
     return aux_str;
 }
 
 int doom_string_resize( char ** string, size_t const size ) {
     if (string == NULL) {
         return -1;
-    } 
+    }
     if (*string == NULL) {
         return -2;
     }
@@ -259,7 +259,7 @@ int doom_string_resize( char ** string, size_t const size ) {
 int doom_string_safe_resize( char ** string, size_t const size ) {
     if (string == NULL) {
         return -1;
-    } 
+    }
     if (*string == NULL) {
         return -2;
     }
@@ -293,7 +293,7 @@ int64_t doom_string_get_max_size( char const * string ) {
 char * doom_string_stpcpy( char ** dst, char const * restrict src ) {
     if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
-    } 
+    }
     if (doom_string_get_max_size(*dst) < doom_string_strlen(src)) {
         doom_string_resize(dst, doom_string_strlen(src));
     }
@@ -305,14 +305,14 @@ char * doom_string_strcat( char ** dst, char const * restrict src ) {
     if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
     }
-    if (doom_string_get_max_size(*dst) < 
+    if (doom_string_get_max_size(*dst) <
         doom_string_strlen(*dst) + doom_string_strlen(src)) {
         doom_string_resize(
-                dst, 
+                dst,
                 doom_string_strlen(*dst)+doom_string_strlen(src)
                 );
     }
-    
+
     return strcat(*dst, src);
 }
 
@@ -321,13 +321,13 @@ char * doom_string_strchr( char * dst, int c ) {
         return NULL;
     }
 
-    return strchr(dst, c); 
+    return strchr(dst, c);
 }
 
 int doom_string_strcmp( char const * s1, char const * s2 ) {
     if (s1 == NULL || s2 == NULL) {
         return -2;
-    } 
+    }
     int aux = strcmp(s1, s2);
 
     return (aux<0) ? -1 : (aux>0) ? 1 : 0;
@@ -336,17 +336,17 @@ int doom_string_strcmp( char const * s1, char const * s2 ) {
 int doom_string_strcoll( char const * s1, char const * s2 ) {
     if (s1 == NULL || s2 == NULL) {
         return -2;
-    } 
+    }
     int aux = strcoll(s1, s2);
 
     return (aux<0) ? -1 : (aux>0) ? 1 : 0;
 }
 
-int doom_string_strcoll_l( char const * s1, char const * s2, 
+int doom_string_strcoll_l( char const * s1, char const * s2,
                            locale_t locale ) {
     if (s1 == NULL || s2 == NULL) {
         return -2;
-    } 
+    }
     int aux = strcoll_l(s1, s2, locale);
 
     return (aux<0) ? -1 : (aux>0) ? 1 : 0;
@@ -355,7 +355,7 @@ int doom_string_strcoll_l( char const * s1, char const * s2,
 char * doom_string_strcpy( char ** dst, char const * restrict src ) {
     if (dst == NULL || src == NULL || *dst == NULL) {
         return NULL;
-    } 
+    }
     if (doom_string_get_max_size(*dst) < doom_string_strlen(src)) {
         doom_string_resize(dst, doom_string_strlen(src));
     }
@@ -366,7 +366,7 @@ char * doom_string_strcpy( char ** dst, char const * restrict src ) {
 size_t doom_string_strcspn( char const * s, char const * reject ) {
     if (s == NULL || reject == NULL) {
         return 0;
-    } 
+    }
 
     return strcspn(s, reject);
 }
@@ -386,7 +386,7 @@ size_t doom_string_strlen( char const * s ) {
 char * doom_string_strpbrk( char const * s, char const * accept ) {
     if (s == NULL || accept == NULL) {
         return 0;
-    } 
+    }
 
     return strpbrk(s, accept);
 }
@@ -394,7 +394,7 @@ char * doom_string_strpbrk( char const * s, char const * accept ) {
 size_t doom_string_strspn( char const * s, char const * accept ) {
     if (s == NULL || accept == NULL) {
         return 0;
-    } 
+    }
 
     return strspn(s, accept);
 }
@@ -414,7 +414,7 @@ char * doom_string_strtok( char * restrict str, char const * restrict delim) {
     return strtok(str, delim);
 }
 
-char * doom_string_strtok_r( char * restrict str, char const * restrict delim, 
+char * doom_string_strtok_r( char * restrict str, char const * restrict delim,
                                                   char ** restrict saveptr) {
     return strtok_r(str, delim, saveptr);
 }

@@ -361,12 +361,12 @@ void * doom_dynamic_array_back( void const * restrict da ) {
     if (da == NULL) {
         return NULL;
     }
-    
+
     doom_dynamic_array_struct da_struct;
     if (doom_dynamic_array_get_struct(&da_struct,(void *)da) != 0) {
         return NULL;
     }
-    
+
     if (*da_struct._array_size == 0) {
         return NULL;
     }
@@ -420,7 +420,7 @@ int doom_dynamic_array_pop_back( void ** da ) {
     if (*da_struct._array_size == 0) {
         return -2;
     }
-    
+
     *da_struct._array_size-=1;
 
     return 0;
@@ -430,12 +430,12 @@ void * doom_dynamic_array_front( void const * restrict da ) {
     if (da == NULL) {
         return NULL;
     }
-    
+
     doom_dynamic_array_struct da_struct;
     if (doom_dynamic_array_get_struct(&da_struct,(void *)da) != 0) {
         return NULL;
     }
-    
+
     if (*da_struct._array_size == 0) {
         return NULL;
     }
@@ -469,7 +469,7 @@ int doom_dynamic_array_push_front( void ** da, void const * restrict value ) {
         }
     }
 
-    memmove(da_struct._array+(*da_struct._sizeof_elem), da_struct._array, 
+    memmove(da_struct._array+(*da_struct._sizeof_elem), da_struct._array,
             (*da_struct._sizeof_elem) * (*da_struct._array_size));
     memcpy(da_struct._array, value, *da_struct._sizeof_elem);
     *da_struct._array_size += 1;
@@ -490,8 +490,8 @@ int doom_dynamic_array_pop_front( void ** da ) {
     if (*da_struct._array_size == 0) {
         return -2;
     }
-    
-    memmove(da_struct._array, da_struct._array+(*da_struct._sizeof_elem), 
+
+    memmove(da_struct._array, da_struct._array+(*da_struct._sizeof_elem),
             (*da_struct._sizeof_elem) * (*da_struct._array_size));
     *da_struct._array_size-=1;
 
@@ -501,4 +501,5 @@ int doom_dynamic_array_pop_front( void ** da ) {
 
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER */
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION */
+
 #endif /* DOOM_C_DYNAMIC_ARRAY_H */
