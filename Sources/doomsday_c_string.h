@@ -16,20 +16,19 @@
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
 
-#define DOOMSDAY_C_STRING_IMPLEMENTATION
-#define DOOMSDAY_C_STRING_STRIP_PREFIX
-
 /*****************************************************************************/
 /* DOOMSDAY C STRING                                                         */
 /*****************************************************************************/
 #ifndef DOOMSDAY_C_STRING_H
 #define  DOOMSDAY_C_STRING_H
 
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 #ifndef ALLOCATOR
 #define ALLOCATOR(x) malloc(x)

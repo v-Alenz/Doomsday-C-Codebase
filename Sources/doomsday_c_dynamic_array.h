@@ -15,16 +15,15 @@
 /* You should have received a copy of the GNU Affero General Public License   */
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
+
+/*****************************************************************************/
+/* DOOMSDAY C DYNAMIC ARRAY                                                  */
+/*****************************************************************************/
 #ifndef DOOM_C_DYNAMIC_ARRAY_H
 #define DOOM_C_DYNAMIC_ARRAY_H
 
-// TODO: Debugging only: remove when implementation
-//       is provided in a separeted module
-#define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
 
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 
 
 #ifndef ALLOCATOR
@@ -70,6 +69,17 @@ int doom_dynamic_array_push_front( void ** da, void const * restrict value );
 int doom_dynamic_array_pop_front( void ** da );
 
 
+#define DOOM_DYNAMIC_ARRAY_FOREACH(elem, array) \
+    elem = array[0]; \
+    for(uint64_t array_index=0; \
+        array_index<doom_dynamic_array_get_size(array); \
+        array_index++, elem = array[array_index] \
+        )
+
+
+/*****************************************************************************/
+/* DOOMSDAY C DYNAMIC ARRAY STRIP PREFIX                                     */
+/*****************************************************************************/
 #ifdef DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
 #ifndef DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_BARRIER
 #define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_BARRIER
@@ -93,9 +103,18 @@ int doom_dynamic_array_pop_front( void ** da );
 
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_BARRIER */
 #endif /* DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX */
+
+
+/*****************************************************************************/
+/* DOOMSDAY C DYNAMIC ARRAY IMPLEMENTATION                                   */
+/*****************************************************************************/
 #ifdef DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
 #ifndef DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER
 #define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION_BARRIER
+
+#include <stdlib.h>
+#include <string.h>
+
 
 int doom_dynamic_array_get_struct( doom_dynamic_array_struct * da_struct, void * da ) {
     if (da_struct == NULL || da == NULL) {
