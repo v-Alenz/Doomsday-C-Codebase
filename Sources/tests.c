@@ -89,24 +89,24 @@ int main( void ) {
 
     DOOM_TEST_CASE(" - doom_string_deinit\n");
 
-    DOOM_TEST_CASE(" - doom_string_factory\n");
-    DOOM_ASSERT((test_string = doom_string_factory()) != NULL);
+    DOOM_TEST_CASE(" - doom_string_new\n");
+    DOOM_ASSERT((test_string = doom_string_new()) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 0);
     DOOM_ASSERT(test_string_struct._char_array[0] == 0);
     doom_string_deinit(test_string);
 
-    DOOM_TEST_CASE(" - doom_string_factory_size\n");
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_TEST_CASE(" - doom_string_new_size\n");
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 20);
     DOOM_ASSERT(test_string_struct._char_array[0] == 0);
     DOOM_ASSERT(test_string_struct._char_array[20] == 0);
     doom_string_deinit(test_string);
 
-    DOOM_TEST_CASE(" - doom_string_factory_copy\n");
-    DOOM_ASSERT((test_string = doom_string_factory_copy(NULL)) == NULL);
-    DOOM_ASSERT((test_string = doom_string_factory_copy("Test String Content")) != NULL);
+    DOOM_TEST_CASE(" - doom_string_new_copy\n");
+    DOOM_ASSERT((test_string = doom_string_new_copy(NULL)) == NULL);
+    DOOM_ASSERT((test_string = doom_string_new_copy("Test String Content")) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 19);
     DOOM_ASSERT(test_string_struct._char_array[0] == 'T');
@@ -116,7 +116,7 @@ int main( void ) {
     DOOM_TEST_CASE(" - doom_string_resize\n");
     DOOM_ASSERT((doom_string_resize(NULL, 10)) == -1);
     DOOM_ASSERT((doom_string_resize(&test_string_null, 10)) == -2);
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 20);
     DOOM_ASSERT(doom_string_resize(&test_string, 10) == 0);
@@ -127,28 +127,28 @@ int main( void ) {
     DOOM_TEST_CASE(" - doom_string_safe_resize\n");
     DOOM_ASSERT((doom_string_safe_resize(NULL, 10)) == -1);
     DOOM_ASSERT((doom_string_safe_resize(&test_string_null, 10)) == -2);
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 20);
     DOOM_ASSERT(doom_string_safe_resize(&test_string, 10) == 0);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 10);
     doom_string_deinit(test_string);
-    DOOM_ASSERT((test_string = doom_string_factory_copy("Test Resize")) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_copy("Test Resize")) != NULL);
     DOOM_ASSERT((doom_string_safe_resize(&test_string, 2)) == -3);
     doom_string_deinit(test_string);
 
     DOOM_TEST_CASE(" - doom_string_fit\n");
     DOOM_ASSERT((doom_string_fit(NULL)) == -1);
     DOOM_ASSERT((doom_string_fit(&test_string_null)) == -2);
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 20);
     DOOM_ASSERT(doom_string_fit(&test_string) == 0);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 0);
     doom_string_deinit(test_string);
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT(doom_string_get_struct(&test_string_struct, test_string) == 0);
     DOOM_ASSERT(*test_string_struct._size == 20);
     test_string[0] =  'T';
@@ -161,13 +161,13 @@ int main( void ) {
     doom_string_deinit(test_string);
 
     DOOM_TEST_CASE(" - doom_string_get_max_size\n");
-    DOOM_ASSERT((test_string = doom_string_factory()) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new()) != NULL);
     DOOM_ASSERT((doom_string_get_max_size(test_string)) == 0);
     doom_string_deinit(test_string);
-    DOOM_ASSERT((test_string = doom_string_factory_size(20)) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
     DOOM_ASSERT((doom_string_get_max_size(test_string)) == 20);
     doom_string_deinit(test_string);
-    DOOM_ASSERT((test_string = doom_string_factory_copy("Test String Content")) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_copy("Test String Content")) != NULL);
     DOOM_ASSERT((doom_string_get_max_size(test_string)) == 19);
     doom_string_deinit(test_string);
 
@@ -175,7 +175,7 @@ int main( void ) {
     DOOM_ASSERT((doom_string_stpcpy( NULL, NULL)) ==  NULL);
     DOOM_ASSERT((doom_string_stpcpy( NULL, "Test")) ==  NULL);
     DOOM_ASSERT((doom_string_stpcpy(&test_string_null, "Test")) ==  NULL);
-    DOOM_ASSERT((test_string = doom_string_factory()) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new()) != NULL);
     DOOM_ASSERT((doom_string_stpcpy(&test_string, "Test String")) != NULL);
     DOOM_ASSERT(strcmp(test_string, "Test String") == 0);
     DOOM_ASSERT(doom_string_get_max_size(test_string) == 11);
@@ -185,7 +185,7 @@ int main( void ) {
     DOOM_ASSERT((doom_string_stpcpy( NULL, NULL)) ==  NULL);
     DOOM_ASSERT((doom_string_stpcpy( NULL, "Test")) ==  NULL);
     DOOM_ASSERT((doom_string_stpcpy(&test_string_null, "Test")) ==  NULL);
-    DOOM_ASSERT((test_string = doom_string_factory_copy("Test String")) != NULL);
+    DOOM_ASSERT((test_string = doom_string_new_copy("Test String")) != NULL);
     DOOM_ASSERT((doom_string_strcat(&test_string, " Concatenation")) != NULL);
     DOOM_ASSERT(strcmp(test_string, "Test String Concatenation") == 0);
     DOOM_ASSERT(doom_string_get_max_size(test_string) == 25);
@@ -274,9 +274,9 @@ int main( void ) {
     }
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
 
-    DOOM_TEST_CASE(" - doom_dynamic_array_factory\n");
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory(sizeof(int32_t))) != NULL);
-    DOOM_ASSERT((doom_string_dynamic_array = (doom_string *) doom_dynamic_array_factory(sizeof(doom_string))) != NULL);
+    DOOM_TEST_CASE(" - doom_dynamic_array_new\n");
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT((doom_string_dynamic_array = (doom_string *) doom_dynamic_array_new(sizeof(doom_string))) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_max_size == ARRAY_DEFAULT_SIZE);
@@ -288,9 +288,9 @@ int main( void ) {
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
     doom_dynamic_array_deinit(*doom_string_dynamic_array_ptr);
 
-    DOOM_TEST_CASE(" - doom_dynamic_array_factory_size\n");
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_size(sizeof(int32_t), 10)) != NULL);
-    DOOM_ASSERT((doom_string_dynamic_array = (doom_string *) doom_dynamic_array_factory_size(sizeof(doom_string), 20)) != NULL);
+    DOOM_TEST_CASE(" - doom_dynamic_array_new_size\n");
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_size(sizeof(int32_t), 10)) != NULL);
+    DOOM_ASSERT((doom_string_dynamic_array = (doom_string *) doom_dynamic_array_new_size(sizeof(doom_string), 20)) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 10);
     DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
@@ -302,8 +302,8 @@ int main( void ) {
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
     doom_dynamic_array_deinit(*doom_string_dynamic_array_ptr);
 
-    DOOM_TEST_CASE(" - doom_dynamic_array_factory_copy\n");
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_TEST_CASE(" - doom_dynamic_array_new_copy\n");
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_copy(sizeof(int32_t), from, 5)) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 5);
     DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
@@ -316,7 +316,7 @@ int main( void ) {
     DOOM_TEST_CASE(" - doom_dynamic_array_deinit\n");
 
     DOOM_TEST_CASE(" - doom_dynamic_array_get_elem_size\n");
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_copy(sizeof(int32_t), from, 5)) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_elem_size(*int_dynamic_array_ptr) == sizeof(int32_t));
 
     DOOM_TEST_CASE(" - doom_dynamic_array_get_size\n");
@@ -377,16 +377,16 @@ int main( void ) {
     DOOM_TEST_CASE(" - doom_dynamic_array_back\n");
     *int_dynamic_array_ptr = NULL;
     DOOM_ASSERT(doom_dynamic_array_back(*int_dynamic_array_ptr) == NULL);
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new(sizeof(int32_t))) != NULL);
     DOOM_ASSERT(doom_dynamic_array_back(*int_dynamic_array_ptr) == NULL);
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_copy(sizeof(int32_t), from, 5)) != NULL);
     DOOM_ASSERT((int_ptr = (int32_t *) doom_dynamic_array_back((void *) int_dynamic_array)) != NULL);
     DOOM_ASSERT(*int_ptr == 5);
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
 
     DOOM_TEST_CASE(" - doom_dynamic_array_push_back\n");
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_copy(sizeof(int32_t), from, 5)) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 5);
     DOOM_ASSERT(*dynamic_array_struct._array_max_size == 10);
@@ -437,10 +437,10 @@ int main( void ) {
     DOOM_TEST_CASE(" - doom_dynamic_array_front\n");
     *int_dynamic_array_ptr = NULL;
     DOOM_ASSERT(doom_dynamic_array_front(*int_dynamic_array_ptr) == NULL);
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory(sizeof(int32_t))) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new(sizeof(int32_t))) != NULL);
     DOOM_ASSERT(doom_dynamic_array_front(*int_dynamic_array_ptr) == NULL);
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
-    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_factory_copy(sizeof(int32_t), from, 5)) != NULL);
+    DOOM_ASSERT((int_dynamic_array = (int32_t *) doom_dynamic_array_new_copy(sizeof(int32_t), from, 5)) != NULL);
     DOOM_ASSERT((int_ptr = (int32_t *) doom_dynamic_array_front((void *) int_dynamic_array)) != NULL);
     DOOM_ASSERT(*int_ptr == 1);
 

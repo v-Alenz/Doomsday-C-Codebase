@@ -26,14 +26,24 @@
 #include <stdint.h>
 
 
-#ifndef ALLOCATOR
-#define ALLOCATOR(x) malloc(x)
-#endif /* ALLOCATOR */
-#ifndef DEALLOCATOR
-#define DEALLOCATOR(x) free(x)
-#endif /* DEALLOCATOR */
+#ifndef DOOM_DYNAMIC_ARRAY_ALLOCATOR
+    #ifdef DOOM_ALLOCATOR
+        #define DOOM_DYNAMIC_ARRAY_ALLOCATOR(x) DOOM_ALLOCATOR(x)
+    #else
+        #define DOOM_DYNAMIC_ARRAY_ALLOCATOR(x) malloc(x)
+    #endif /* DOOM_ALLOCATOR */
+#endif /* DOOM_DYNAMIC_ARRAY_ALLOCATOR */
 
-#define ARRAY_DEFAULT_SIZE 1
+#ifndef DOOM_DYNAMIC_ARRAY_DEALLOCATOR
+    #ifdef DOOM_DEALLOCATOR
+        #define DOOM_DYNAMIC_ARRAY_DEALLOCATOR(x) DOOM_DEALLOCATOR(x)
+    #else
+        #define DOOM_DYNAMIC_ARRAY_DEALLOCATOR(x) free(x)
+    #endif /* DOOM_DEALLOCATOR */
+#endif /* DOOM_DYNAMIC_ARRAY_DEALLOCATOR */
+
+
+#define ARRAY_DEFAULT_SIZE 5
 
 typedef uint8_t byte;
 typedef struct doomsday_c_dynamic_array_t {
@@ -49,9 +59,9 @@ void * doom_dynamic_array_get_base_ptr( void * da );
 int doom_dynamic_array_init( void ** da , int64_t const sizeof_elem );
 int doom_dynamic_array_init_size( void ** da, int64_t const sizeof_elem, int64_t const size );
 int doom_dynamic_array_init_copy( void ** da, int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
-void * doom_dynamic_array_factory( int64_t const sizeof_elem );
-void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const size );
-void * doom_dynamic_array_factory_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
+void * doom_dynamic_array_new( int64_t const sizeof_elem );
+void * doom_dynamic_array_new_size( int64_t const sizeof_elem, int64_t const size );
+void * doom_dynamic_array_new_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size );
 void doom_dynamic_array_deinit( void * da );
 int64_t doom_dynamic_array_get_elem_size( void const * restrict da );
 int64_t doom_dynamic_array_get_size( void const * restrict da );
@@ -90,9 +100,9 @@ int doom_dynamic_array_pop_front( void ** da );
 #define dynamic_array_init_s doom_dynamic_array_init_size
 #define dynamic_array_init_c doom_dynamic_array_init_copy
 #define dynamic_array_deinit doom_dynamic_array_deinit
-#define dynamic_array_factory doom_dynamic_array_factory
-#define dynamic_array_factory_copy doom_dynamic_array_factory_copy
-#define dynamic_array_factory_size doom_dynamic_array_factory_size
+#define dynamic_array_new doom_dynamic_array_new
+#define dynamic_array_new_copy doom_dynamic_array_new_copy
+#define dynamic_array_new_size doom_dynamic_array_new_size
 #define dynamic_array_get_elem_size doom_dynamic_array_get_elem_size
 #define dynamic_array_get_size doom_dynamic_array_get_size
 #define dynamic_array_get_max_size doom_dynamic_array_get_max_size
@@ -140,7 +150,7 @@ int doom_dynamic_array_init( void ** da, int64_t sizeof_elem) {
     }
     void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
-    alloc_ptr = ALLOCATOR(sizeof_elem*ARRAY_DEFAULT_SIZE + sizeof(int64_t)*3);
+    alloc_ptr = DOOM_DYNAMIC_ARRAY_ALLOCATOR(sizeof_elem*ARRAY_DEFAULT_SIZE + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -162,7 +172,7 @@ int doom_dynamic_array_init_size( void ** da, int64_t sizeof_elem, int64_t size 
     }
     void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
-    alloc_ptr = ALLOCATOR(sizeof_elem*size + sizeof(int64_t)*3);
+    alloc_ptr = DOOM_DYNAMIC_ARRAY_ALLOCATOR(sizeof_elem*size + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -184,7 +194,7 @@ int doom_dynamic_array_init_copy( void ** da, int64_t sizeof_elem, void const * 
     }
     void * alloc_ptr = NULL;
     doom_dynamic_array_struct da_struct;
-    alloc_ptr = ALLOCATOR(sizeof_elem*from_size*2 + sizeof(int64_t)*3);
+    alloc_ptr = DOOM_DYNAMIC_ARRAY_ALLOCATOR(sizeof_elem*from_size*2 + sizeof(int64_t)*3);
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -201,7 +211,7 @@ int doom_dynamic_array_init_copy( void ** da, int64_t sizeof_elem, void const * 
     return 0;
 }
 
-void * doom_dynamic_array_factory( int64_t const sizeof_elem ) {
+void * doom_dynamic_array_new( int64_t const sizeof_elem ) {
     byte * aux_da = NULL;
     if(doom_dynamic_array_init((void **)&aux_da, sizeof_elem) != 0) {
         return NULL;
@@ -209,7 +219,7 @@ void * doom_dynamic_array_factory( int64_t const sizeof_elem ) {
     return aux_da;
 }
 
-void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const size ) {
+void * doom_dynamic_array_new_size( int64_t const sizeof_elem, int64_t const size ) {
     byte * aux_da = NULL;
     if(doom_dynamic_array_init_size((void **)&aux_da, sizeof_elem, size) != 0) {
         return NULL;
@@ -217,7 +227,7 @@ void * doom_dynamic_array_factory_size( int64_t const sizeof_elem, int64_t const
     return aux_da;
 }
 
-void * doom_dynamic_array_factory_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size ) {
+void * doom_dynamic_array_new_copy( int64_t const sizeof_elem, void const * restrict from, int64_t const from_size ) {
     byte * aux_da = NULL;
     if(doom_dynamic_array_init_copy((void **)&aux_da, sizeof_elem, from, from_size) != 0) {
         return NULL;
@@ -233,7 +243,7 @@ void doom_dynamic_array_deinit( void * da ) {
     if (base_ptr == NULL) {
         return;
     }
-    DEALLOCATOR(base_ptr);
+    DOOM_DYNAMIC_ARRAY_DEALLOCATOR(base_ptr);
 }
 
 int64_t doom_dynamic_array_get_elem_size( void const * restrict da ) {
@@ -268,7 +278,7 @@ int doom_dynamic_array_expand( void ** da ) {
     if ((doom_dynamic_array_get_struct(&da_struct, *da)) != 0) {
         return -1;
     }
-    void * da_alloc = doom_dynamic_array_factory_size(*da_struct._sizeof_elem, *da_struct._array_max_size*2);
+    void * da_alloc = doom_dynamic_array_new_size(*da_struct._sizeof_elem, *da_struct._array_max_size*2);
     if (da_alloc == NULL) {
         return -2;
     }
@@ -324,7 +334,7 @@ int doom_dynamic_array_fit( void ** da ) {
     }
 
     if (*da_struct._array_max_size > *da_struct._array_size) {
-        void * da_alloc = doom_dynamic_array_factory_size(*da_struct._sizeof_elem, *da_struct._array_size);
+        void * da_alloc = doom_dynamic_array_new_size(*da_struct._sizeof_elem, *da_struct._array_size);
         if (da_alloc == NULL) {
             return -2;
         }
@@ -357,7 +367,7 @@ int doom_dynamic_array_reserve( void ** da, int64_t const size ) {
     }
 
     if (*da_struct._array_max_size < size) {
-        void * da_alloc = doom_dynamic_array_factory_size(*da_struct._sizeof_elem, size);
+        void * da_alloc = doom_dynamic_array_new_size(*da_struct._sizeof_elem, size);
         if (da_alloc == NULL) {
             return -2;
         }

@@ -30,12 +30,21 @@
 #include <string.h>
 
 
-#ifndef ALLOCATOR
-#define ALLOCATOR(x) malloc(x)
-#endif /* ALLOCATOR */
-#ifndef DEALLOCATOR
-#define DEALLOCATOR(x) free(x)
-#endif /* DEALLOCATOR */
+#ifndef DOOM_STRING_ALLOCATOR
+    #ifdef DOOM_ALLOCATOR
+        #define DOOM_STRING_ALLOCATOR(x) DOOM_ALLOCATOR(x)
+    #else
+        #define DOOM_STRING_ALLOCATOR(x) malloc(x)
+    #endif /* DOOM_ALLOCATOR */
+#endif /* DOOM_STRING_ALLOCATOR */
+
+#ifndef DOOM_STRING_DEALLOCATOR
+    #ifdef DOOM_DEALLOCATOR
+        #define DOOM_STRING_DEALLOCATOR(x) DOOM_DEALLOCATOR(x)
+    #else
+        #define DOOM_STRING_DEALLOCATOR(x) free(x)
+    #endif /* DOOM_DEALLOCATOR */
+#endif /* DOOM_STRING_DEALLOCATOR */
 
 
 typedef struct doomsday_c_string_t {
@@ -53,9 +62,9 @@ int     doom_string_init( char ** string );
 int     doom_string_init_size ( char ** string, size_t const size );
 int     doom_string_init_copy ( char ** string, char const * restrict c_string );
 void    doom_string_deinit( char * string );
-char *  doom_string_factory( void );
-char *  doom_string_factory_size( size_t const size );
-char *  doom_string_factory_copy ( char const * restrict c_string );
+char *  doom_string_new( void );
+char *  doom_string_new_size( size_t const size );
+char *  doom_string_new_copy ( char const * restrict c_string );
 int     doom_string_resize( char ** string, size_t const size );
 int     doom_string_safe_resize( char ** string, size_t const size );
 int     doom_string_fit( char ** string );
@@ -92,9 +101,9 @@ char *  doom_string_strtok_r( char * restrict str, char const * restrict delim,
 #define string_init_s doom_string_init_size
 #define string_init_c doom_string_init_copy
 #define string_deinit doom_string_deinit
-#define string_get doom_string_factory
-#define string_get_s doom_string_factory_size
-#define string_get_c doom_string_factory_copy
+#define string_new doom_string_new
+#define string_new_size doom_string_new_size
+#define string_new_copy doom_string_new_copy
 #define string_resize doom_string_resize
 #define string_safe_resize doom_string_safe_resize
 #define string_fit doom_string_fit
@@ -146,7 +155,7 @@ int doom_string_init( char ** string ) {
     void * alloc_ptr = NULL;
     doom_string_struct doom_str;
     memset(&doom_str, 0, sizeof(doom_str));
-    alloc_ptr = ALLOCATOR(sizeof(char) + sizeof(int64_t));
+    alloc_ptr = DOOM_STRING_ALLOCATOR(sizeof(char) + sizeof(int64_t));
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -164,7 +173,7 @@ int doom_string_init_size ( char ** string, size_t const size ) {
     void * alloc_ptr = NULL;
     doom_string_struct doom_str;
     memset(&doom_str, 0, sizeof(doom_str));
-    alloc_ptr = ALLOCATOR((sizeof(char)*size+1) + sizeof(int64_t));
+    alloc_ptr = DOOM_STRING_ALLOCATOR((sizeof(char)*size+1) + sizeof(int64_t));
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -186,7 +195,7 @@ int doom_string_init_copy ( char ** string, char const * restrict c_string ) {
     doom_string_struct doom_str;
     size_t c_string_size = strlen(c_string);
     memset(&doom_str, 0, sizeof(doom_str));
-    alloc_ptr = ALLOCATOR((sizeof(char)*c_string_size+1) + sizeof(int64_t));
+    alloc_ptr = DOOM_STRING_ALLOCATOR((sizeof(char)*c_string_size+1) + sizeof(int64_t));
     if (alloc_ptr == NULL) {
         return -1;
     }
@@ -209,10 +218,10 @@ void doom_string_deinit( char * string ) {
     if (aux_ptr == NULL) {
         return;
     }
-    DEALLOCATOR(aux_ptr);
+    DOOM_STRING_DEALLOCATOR(aux_ptr);
 }
 
-char * doom_string_factory( void ) {
+char * doom_string_new( void ) {
     char * aux_str = NULL;
     if((doom_string_init(&aux_str)) != 0) {
         return NULL;
@@ -221,7 +230,7 @@ char * doom_string_factory( void ) {
     return aux_str;
 }
 
-char * doom_string_factory_size( size_t const size ) {
+char * doom_string_new_size( size_t const size ) {
     char * aux_str = NULL;
     if((doom_string_init_size(&aux_str, size)) != 0) {
         return NULL;
@@ -230,7 +239,7 @@ char * doom_string_factory_size( size_t const size ) {
     return aux_str;
 }
 
-char * doom_string_factory_copy ( char const * restrict c_string ) {
+char * doom_string_new_copy ( char const * restrict c_string ) {
     char * aux_str = NULL;
     if((doom_string_init_copy(&aux_str, c_string)) != 0) {
         return NULL;
@@ -246,7 +255,7 @@ int doom_string_resize( char ** string, size_t const size ) {
     if (*string == NULL) {
         return -2;
     }
-    char * aux_str = doom_string_factory_size(size);
+    char * aux_str = doom_string_new_size(size);
     int64_t aux_len = doom_string_get_max_size(*string);
     memcpy(aux_str, *string, (aux_len < size) ? aux_len : size);
     doom_string_deinit(*string);
@@ -371,7 +380,7 @@ size_t doom_string_strcspn( char const * s, char const * reject ) {
 }
 
 char * doom_string_strdup( char const * s ) {
-    return doom_string_factory_copy(s);
+    return doom_string_new_copy(s);
 }
 
 size_t doom_string_strlen( char const * s ) {

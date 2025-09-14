@@ -2,7 +2,7 @@
 /* DoomsDay C                                                                 */
 /* Copyright (C) 2025 - v-Alenz                                               */
 /*                                                                            */
-/* This program is DEALLOCATOR software: you can redistribute it and/or modify       */
+/* This program is DOOM_LIST_DEALLOCATOR software: you can redistribute it and/or modify       */
 /* it under the terms of the GNU Affero General Public License as published by*/
 /* the Free Software Foundation, either version 3 of the License, or          */
 /* (at your option) any later version.                                        */
@@ -30,12 +30,21 @@
 #include <stddef.h>
 
 
-#ifndef ALLOCATOR
-#define ALLOCATOR(x) malloc(x)
-#endif /* ALLOCATOR */
-#ifndef DEALLOCATOR
-#define DEALLOCATOR(x) free(x)
-#endif /* DEALLOCATOR */
+#ifndef DOOM_LIST_ALLOCATOR
+    #ifdef DOOM_ALLOCATOR
+        #define DOOM_LIST_ALLOCATOR(x) DOOM_ALLOCATOR(x)
+    #else
+        #define DOOM_LIST_ALLOCATOR(x) malloc(x)
+    #endif /* DOOM_ALLOCATOR */
+#endif /* DOOM_LIST_ALLOCATOR */
+
+#ifndef DOOM_LIST_DEALLOCATOR
+    #ifdef DOOM_DEALLOCATOR
+        #define DOOM_LIST_DEALLOCATOR(x) DOOM_DEALLOCATOR(x)
+    #else
+        #define DOOM_LIST_DEALLOCATOR(x) free(x)
+    #endif /* DOOM_DEALLOCATOR */
+#endif /* DOOM_LIST_DEALLOCATOR */
 
 
 /* doom list node */
@@ -132,7 +141,7 @@ int    doom_list_remove_at( doom_list * list, uint64_t index );
 
 
 doom_list_node * doom_list_node_new( void ) {
-    doom_list_node * node = (doom_list_node *) ALLOCATOR(sizeof(doom_list_node));
+    doom_list_node * node = (doom_list_node *) DOOM_LIST_ALLOCATOR(sizeof(doom_list_node));
     if (node == NULL) {
         return node;
     }
@@ -146,7 +155,7 @@ int doom_list_node_init( doom_list_node * node, uint64_t size) {
     if (node == NULL) {
         return -1;
     }
-    node->payload = ALLOCATOR(size);
+    node->payload = DOOM_LIST_ALLOCATOR(size);
     if (node->payload == NULL) {
         return -1;
     }
@@ -158,9 +167,9 @@ void doom_list_node_deinit( doom_list_node * node ) {
         return;
     }
     if (node->payload != NULL) {
-        DEALLOCATOR(node->payload);
+        DOOM_LIST_DEALLOCATOR(node->payload);
     }
-    DEALLOCATOR(node);
+    DOOM_LIST_DEALLOCATOR(node);
 }
 
 int doom_list_node_assign( doom_list_node * dest, void * payload, uint64_t size) {
@@ -223,7 +232,7 @@ int doom_list_node_insert_before( doom_list_node * ref, doom_list_node * node ) 
 }
 
 doom_list * doom_list_new( uint64_t data_size ) {
-    doom_list * list = (doom_list *) ALLOCATOR(sizeof(doom_list));
+    doom_list * list = (doom_list *) DOOM_LIST_ALLOCATOR(sizeof(doom_list));
     if (list == NULL) {
         return NULL;
     }
@@ -236,7 +245,7 @@ doom_list * doom_list_new( uint64_t data_size ) {
 
 int doom_list_init( doom_list ** list, uint64_t data_size ) {
     doom_list * list_aux;
-    list_aux = (doom_list *) ALLOCATOR(sizeof(doom_list));
+    list_aux = (doom_list *) DOOM_LIST_ALLOCATOR(sizeof(doom_list));
     if (list == NULL) {
         return -1;
     }
@@ -475,7 +484,7 @@ void doom_list_deinit( doom_list * list ) {
         return;
     }
     while ((doom_list_pop_front(list)) == 0) {}
-    DEALLOCATOR(list);
+    DOOM_LIST_DEALLOCATOR(list);
 }
 
 
