@@ -21,6 +21,16 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* Doomsday C Arena Allocator */
+#define DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION
+#define DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX
+#include "doomsday_c_arena_allocator.h"
+#define MEMORY_ARENA_SIZE 2048
+static byte static_memory[MEMORY_ARENA_SIZE];
+static doom_memory_arena global_arena;
+#define DOOM_ALLOCATOR(x) doom_memory_arena_malloc(&global_arena, x)
+#define DOOM_DEALLOCATOR(x) doom_memory_arena_free(&global_arena, x)
 /* Doomsday C String */
 #define DOOMSDAY_C_STRING_IMPLEMENTATION
 #define DOOMSDAY_C_STRING_STRIP_PREFIX
@@ -40,6 +50,8 @@
 
 
 int main( void ) {
+
+    doom_memory_arena_init(&global_arena, static_memory, MEMORY_ARENA_SIZE);
 
     uint64_t test_cases_count = 0;
     uint64_t asserts_count = 0;
