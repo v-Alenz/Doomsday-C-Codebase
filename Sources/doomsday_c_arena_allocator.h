@@ -16,12 +16,6 @@
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
 
-/* Debug */
-#include <stdio.h>
-#include <string.h>
-#define DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION
-#define DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX
-
 
 /*****************************************************************************/
 /* DOOMSDAY C ARENA ALLOCATOR                                                */
@@ -31,7 +25,6 @@
 
 
 #include <stdint.h>
-#include <stdlib.h>
 
 
 typedef uint8_t byte;
@@ -60,10 +53,18 @@ int doom_memory_arena_get_chunk_info( doom_memory_arena_chunk * chunk, void * me
 void * doom_memory_arena_malloc( doom_memory_arena * arena, uint64_t size );
 void doom_memory_arena_free( doom_memory_arena * arena, void * memory );
 
+
 /*****************************************************************************/
 /* DOOMSDAY C ARENA ALLOCATOR STRIP PREFIX                                   */
 /*****************************************************************************/
 #ifdef DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX
+
+#define memory_arena_init           doom_memory_arena_init
+#define memory_arena_new            doom_memory_arena_new
+#define memory_arena_get_chunk_info doom_memory_arena_get_chunk_info
+#define memory_arean_malloc         doom_memory_arena_malloc
+#define memory_arena_free           doom_memory_arena_free
+
 #endif /* DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX */
 
 
@@ -73,6 +74,10 @@ void doom_memory_arena_free( doom_memory_arena * arena, void * memory );
 #ifdef DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION
 #ifndef DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION_BARRIER
 #define DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION_BARRIER
+
+
+#include <string.h>
+
 
 int doom_memory_arena_init( doom_memory_arena * arena, void * memory, uint64_t size ) {
     if (arena == NULL || memory == NULL || size == 0) {
