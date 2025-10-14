@@ -22,6 +22,13 @@
 #ifndef DOOMSDAY_C_THREAD_H
 #define  DOOMSDAY_C_THREAD_H
 
+#define DOOMSDAY_C_THREAD_IMPLEMENTATION
+#define DOOMSDAY_C_THREAD_STRIP_PREFIX
+
+
+#include <stdlib.h>
+#include <pthread.h>
+
 
 #ifndef DOOM_THREAD_ALLOCATOR
     #ifdef DOOM_ALLOCATOR
@@ -75,6 +82,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     fname(                                                                  \
             f_args->arg0                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -103,6 +111,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg0,                                                   \
             f_args->arg1                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -135,6 +144,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg1,                                                   \
             f_args->arg2                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -171,6 +181,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg2,                                                   \
             f_args->arg3                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -211,6 +222,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg3,                                                   \
             f_args->arg4                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -255,6 +267,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg4,                                                   \
             f_args->arg4                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
 } 
 
@@ -288,6 +301,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     *result = fname(                                                        \
             f_args->arg0                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return (void *) result;                                                 \
 } 
 
@@ -317,6 +331,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg0,                                                   \
             f_args->arg1                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return result;                                                          \
 } 
 
@@ -350,6 +365,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg1,                                                   \
             f_args->arg2                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return result;                                                          \
 } 
 
@@ -387,6 +403,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg2,                                                   \
             f_args->arg3                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return result;                                                          \
 } 
 
@@ -428,6 +445,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg3,                                                   \
             f_args->arg4                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return result;                                                          \
 } 
 
@@ -473,8 +491,32 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg4,                                                   \
             f_args->arg5                                                    \
          );                                                                 \
+    DOOM_THREAD_DEALLOCATOR(args);                                          \
     return result;                                                          \
 } 
+
+
+typedef pthread_t doom_thread;
+
+int doom_thread_create( doom_thread * restrict newthread, 
+        void *(*start_routine)(void *), void *restrict arg );
+
+int doom_thread_create_detached( doom_thread * restrict newthread, 
+        void *(*start_routine)(void *), void *restrict arg );
+
+doom_thread * doom_thread_new( void *(*start_routine)(void *), 
+        void *restrict arg );
+
+doom_thread * doom_thread_new_detached( void *(*start_routine)(void *), 
+        void *restrict arg );
+
+void * doom_thread_join( doom_thread * thread );
+
+int doom_thread_detach( doom_thread * thread );
+
+void doom_thread_deinit( void * result );
+
+void doom_thread_result_deinit( void * result );
 
 
 /*****************************************************************************/
@@ -484,6 +526,14 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
 #ifndef DOOMSDAY_C_THREAD_STRIP_BARRIER
 #define DOOMSDAY_C_THREAD_STRIP_BARRIER
 
+#define thread_create doom_thread_create
+#define thread_create_detached doom_thread_create_detached
+#define thread_new doom_thread_new
+#define thread_new_detached doom_thread_new_detached
+#define thread_join doom_thread_join
+#define thread_detach doom_thread_detach
+#define thread_deinit  doom_thread_deinit
+#define thread_result_deinit  doom_thread_result_deinit
 
 #endif /* DOOMSDAY_C_THREAD_STRIP_BARRIER */
 #endif /* DOOMSDAY_C_THREAD_STRIP_PREFIX */
@@ -495,6 +545,83 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
 #ifdef DOOMSDAY_C_THREAD_IMPLEMENTATION
 #ifndef DOOMSDAY_C_THREAD_IMPLEMENTATION_BARRIER
 #define DOOMSDAY_C_THREAD_IMPLEMENTATION_BARRIER
+
+
+int doom_thread_create( doom_thread * restrict newthread, 
+        void *(*start_routine)(void *), void *restrict arg ) {
+    int result = 0;
+    result = pthread_create(newthread, NULL, start_routine, arg);
+    return result;
+}
+
+int doom_thread_create_detached( doom_thread * restrict newthread, 
+        void *(*start_routine)(void *), void *restrict arg ) {
+    int result = 0;  
+    result = pthread_create(newthread, NULL, start_routine, arg);
+    if (result != 0) {
+        return result;
+    }
+    result = pthread_detach(*newthread);
+    return result;
+}
+
+doom_thread * doom_thread_new( void *(*start_routine)(void *), 
+        void *restrict arg ) {
+    doom_thread  * newthread = NULL;
+    int result = 0;
+    newthread = (doom_thread *)DOOM_THREAD_ALLOCATOR(sizeof(doom_thread));
+    if (newthread == NULL) {
+        return NULL;
+    }
+    result = pthread_create(newthread, NULL, start_routine, arg);
+    if (result != 0) {
+        return NULL;
+    }
+    return newthread;
+}
+
+doom_thread * doom_thread_new_detached( void *(*start_routine)(void *), 
+        void *restrict arg ) {
+    doom_thread  * newthread = NULL;
+    int result = 0;
+    newthread = (doom_thread *)DOOM_THREAD_ALLOCATOR(sizeof(doom_thread));
+    if (newthread == NULL) {
+        return NULL;
+    }
+    result = pthread_create(newthread, NULL, start_routine, arg);
+    if (result != 0) {
+        return NULL;
+    }
+    result = pthread_detach(*newthread);
+    if (result != 0) {
+        return NULL;
+    }
+    return newthread;
+}
+
+void * doom_thread_join( doom_thread * thread ) {
+    void * result = NULL;
+    int ret = 0;
+    ret = pthread_join(*thread, &result);
+    if (ret != 0) {
+        return NULL;
+    }
+    return result;
+}
+
+int doom_thread_detach( doom_thread * thread ) {
+    int ret = 0;
+    ret = pthread_detach(*thread);
+    return ret;
+}
+
+void doom_thread_deinit(void *result) {
+    DOOM_THREAD_DEALLOCATOR(result);
+}
+
+void doom_thread_result_deinit( void * result ) {
+    DOOM_THREAD_DEALLOCATOR(result);
+}
 
 
 #endif /* DOOMSDAY_C_THREAD_IMPLEMENTATION_BARRIER */

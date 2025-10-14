@@ -29,7 +29,6 @@
 
 typedef uint8_t byte;
 
-
 typedef struct doomsday_c_memory_arena_t {
     uint64_t _memory_size;
     uint64_t _memory_used_size;
