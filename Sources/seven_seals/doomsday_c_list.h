@@ -74,10 +74,10 @@ int    doom_list_node_assign( doom_list_node * dest, void * payload, uint64_t si
 void * doom_list_node_get( doom_list_node * node );
 int    doom_list_node_insert_after( doom_list_node * ref, doom_list_node * node );
 int    doom_list_node_insert_before( doom_list_node * ref, doom_list_node * node );
-void   doom_list_deinit( doom_list * list );
-/* list (sentry) functional */
+/* list (sentry) functionality */
 doom_list * doom_list_new( uint64_t data_size );
 int    doom_list_init( doom_list ** list, uint64_t data_size );
+void   doom_list_deinit( doom_list * list );
 int    doom_list_push_front( doom_list * list, void * value );
 int    doom_list_push_back( doom_list * list, void * value );
 int    doom_list_pop_front( doom_list * list );
