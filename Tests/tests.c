@@ -25,7 +25,7 @@
 /* Doomsday C Arena Allocator */
 #define DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION
 #define DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX
-#include "seven_trumpets/doomsday_c_arena_allocator.h"
+#include "../Sources/Libs/doomsday_c_arena_allocator.h"
 #define MEMORY_ARENA_SIZE 2048
 static byte static_memory[MEMORY_ARENA_SIZE];
 static doom_memory_arena global_arena;
@@ -34,15 +34,15 @@ static doom_memory_arena global_arena;
 /* Doomsday C String */
 #define DOOMSDAY_C_STRING_IMPLEMENTATION
 #define DOOMSDAY_C_STRING_STRIP_PREFIX
-#include "seven_seals/doomsday_c_string.h"
+#include "../Sources/Libs/doomsday_c_string.h"
 /* Doomsday C Dynamic Array */
 #define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
 #define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
-#include "seven_seals/doomsday_c_dynamic_array.h"
+#include "../Sources/Libs/doomsday_c_dynamic_array.h"
 /* Doomsday C List */
 #define DOOMSDAY_C_LIST_IMPLEMENTATION
 #define DOOMSDAY_C_LIST_STRIP_PREFIX
-#include "seven_seals/doomsday_c_list.h"
+#include "../Sources/Libs/doomsday_c_list.h"
 
 
 #define DOOM_ASSERT(prop) do{assert(prop); asserts_count++;}while(0)
