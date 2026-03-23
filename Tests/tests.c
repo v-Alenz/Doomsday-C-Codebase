@@ -22,27 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Doomsday C Arena Allocator */
-#define DOOMSDAY_C_ARENA_ALLOCATOR_IMPLEMENTATION
-#define DOOMSDAY_C_ARENA_ALLOCATOR_STRIP_PREFIX
-#include "../Sources/Libs/doomsday_c_arena_allocator.h"
-#define MEMORY_ARENA_SIZE 2048
-static byte static_memory[MEMORY_ARENA_SIZE];
-static doom_memory_arena global_arena;
-#define DOOM_ALLOCATOR(x) doom_memory_arena_malloc(&global_arena, x)
-#define DOOM_DEALLOCATOR(x) doom_memory_arena_free(&global_arena, x)
-/* Doomsday C String */
-#define DOOMSDAY_C_STRING_IMPLEMENTATION
-#define DOOMSDAY_C_STRING_STRIP_PREFIX
-#include "../Sources/Libs/doomsday_c_string.h"
-/* Doomsday C Dynamic Array */
-#define DOOMSDAY_C_DYNAMIC_ARRAY_IMPLEMENTATION
-#define DOOMSDAY_C_DYNAMIC_ARRAY_STRIP_PREFIX
-#include "../Sources/Libs/doomsday_c_dynamic_array.h"
-/* Doomsday C List */
-#define DOOMSDAY_C_LIST_IMPLEMENTATION
-#define DOOMSDAY_C_LIST_STRIP_PREFIX
-#include "../Sources/Libs/doomsday_c_list.h"
+#include "../Sources/doomsday.c"
 
 
 #define DOOM_ASSERT(prop) do{assert(prop); asserts_count++;}while(0)
@@ -50,8 +30,6 @@ static doom_memory_arena global_arena;
 
 
 int main( void ) {
-
-    doom_memory_arena_init(&global_arena, static_memory, MEMORY_ARENA_SIZE);
 
     uint64_t test_cases_count = 0;
     uint64_t asserts_count = 0;
@@ -172,15 +150,15 @@ int main( void ) {
     DOOM_ASSERT(*test_string_struct._size == 4);
     doom_string_deinit(test_string);
 
-    DOOM_TEST_CASE(" - doom_string_get_max_size\n");
+    DOOM_TEST_CASE(" - doom_string_get_size\n");
     DOOM_ASSERT((test_string = doom_string_new()) != NULL);
-    DOOM_ASSERT((doom_string_get_max_size(test_string)) == 0);
+    DOOM_ASSERT((doom_string_get_size(test_string)) == 0);
     doom_string_deinit(test_string);
     DOOM_ASSERT((test_string = doom_string_new_size(20)) != NULL);
-    DOOM_ASSERT((doom_string_get_max_size(test_string)) == 20);
+    DOOM_ASSERT((doom_string_get_size(test_string)) == 20);
     doom_string_deinit(test_string);
     DOOM_ASSERT((test_string = doom_string_new_copy("Test String Content")) != NULL);
-    DOOM_ASSERT((doom_string_get_max_size(test_string)) == 19);
+    DOOM_ASSERT((doom_string_get_size(test_string)) == 19);
     doom_string_deinit(test_string);
 
     DOOM_TEST_CASE(" - doom_string_stpcpy\n");
@@ -190,7 +168,7 @@ int main( void ) {
     DOOM_ASSERT((test_string = doom_string_new()) != NULL);
     DOOM_ASSERT((doom_string_stpcpy(&test_string, "Test String")) != NULL);
     DOOM_ASSERT(strcmp(test_string, "Test String") == 0);
-    DOOM_ASSERT(doom_string_get_max_size(test_string) == 11);
+    DOOM_ASSERT(doom_string_get_size(test_string) == 11);
     doom_string_deinit(test_string);
 
     DOOM_TEST_CASE(" - doom_string_strcat\n");
@@ -200,7 +178,7 @@ int main( void ) {
     DOOM_ASSERT((test_string = doom_string_new_copy("Test String")) != NULL);
     DOOM_ASSERT((doom_string_strcat(&test_string, " Concatenation")) != NULL);
     DOOM_ASSERT(strcmp(test_string, "Test String Concatenation") == 0);
-    DOOM_ASSERT(doom_string_get_max_size(test_string) == 25);
+    DOOM_ASSERT(doom_string_get_size(test_string) == 25);
     doom_string_deinit(test_string);
 
     DOOM_TEST_CASE(" - doom_string_strchr\n");
@@ -244,18 +222,18 @@ int main( void ) {
     DOOM_ASSERT(doom_dynamic_array_get_struct(NULL, NULL) == -1);
 
     DOOM_TEST_CASE(" - doom_dynamic_array_get_base_ptr\n");
-    DOOM_ASSERT(doom_dynamic_array_get_base_ptr(NULL) == NULL);
+    DOOM_ASSERT(doom_dynamic_array_base_ptr(NULL) == NULL);
 
     DOOM_TEST_CASE(" - doom_dynamic_array_init\n");
     DOOM_ASSERT(doom_dynamic_array_init(int_dynamic_array_ptr, sizeof(int32_t)) == 0);
     DOOM_ASSERT(doom_dynamic_array_init(doom_string_dynamic_array_ptr, sizeof(doom_string)) == 0);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 0);
-    DOOM_ASSERT(*dynamic_array_struct._array_max_size == ARRAY_DEFAULT_SIZE);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == DOOM_ARRAY_INIT_DEFAULT_SIZE);
     DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *doom_string_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 0);
-    DOOM_ASSERT(*dynamic_array_struct._array_max_size == ARRAY_DEFAULT_SIZE);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == DOOM_ARRAY_INIT_DEFAULT_SIZE);
     DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(doom_string));
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
     doom_dynamic_array_deinit(*doom_string_dynamic_array_ptr);
@@ -291,11 +269,11 @@ int main( void ) {
     DOOM_ASSERT((doom_string_dynamic_array = (doom_string *) doom_dynamic_array_new(sizeof(doom_string))) != NULL);
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *int_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 0);
-    DOOM_ASSERT(*dynamic_array_struct._array_max_size == ARRAY_DEFAULT_SIZE);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == DOOM_ARRAY_INIT_DEFAULT_SIZE);
     DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(int32_t));
     DOOM_ASSERT(doom_dynamic_array_get_struct(&dynamic_array_struct, *doom_string_dynamic_array_ptr) == 0);
     DOOM_ASSERT(*dynamic_array_struct._array_size == 0);
-    DOOM_ASSERT(*dynamic_array_struct._array_max_size == ARRAY_DEFAULT_SIZE);
+    DOOM_ASSERT(*dynamic_array_struct._array_max_size == DOOM_ARRAY_INIT_DEFAULT_SIZE);
     DOOM_ASSERT(*dynamic_array_struct._sizeof_elem == sizeof(doom_string));
     doom_dynamic_array_deinit(*int_dynamic_array_ptr);
     doom_dynamic_array_deinit(*doom_string_dynamic_array_ptr);
@@ -509,45 +487,45 @@ int main( void ) {
     list_ptr = NULL;
 
     DOOM_TEST_CASE(" - doom_list_node_new\n");
-    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT((node_ptr = doom_list_node_new(DOOMSDAY_C_DEFAULT_ALLOCATOR)) != NULL);
     DOOM_ASSERT(node_ptr->payload == NULL);
     DOOM_ASSERT(node_ptr->next == NULL);
     DOOM_ASSERT(node_ptr->prev == NULL);
-    doom_list_node_deinit(node_ptr);
+    doom_list_node_deinit(node_ptr, DOOMSDAY_C_DEFAULT_DEALLOCATOR);
 
     DOOM_TEST_CASE(" - doom_list_node_init\n");
     node_ptr = NULL;
-    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double)) == -1);
-    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
-    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double)) == sizeof(double));
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double), DOOMSDAY_C_DEFAULT_ALLOCATOR) == -1);
+    DOOM_ASSERT((node_ptr = doom_list_node_new(DOOMSDAY_C_DEFAULT_ALLOCATOR)) != NULL);
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(double), DOOMSDAY_C_DEFAULT_ALLOCATOR) == sizeof(double));
     *((double *)node_ptr->payload) = 10.10;
     DOOM_ASSERT((*(double *) node_ptr->payload) == 10.10);
 
     DOOM_TEST_CASE(" - doom_list_node_deinit\n");
-    doom_list_node_deinit(node_ptr);
+    doom_list_node_deinit(node_ptr, DOOMSDAY_C_DEFAULT_DEALLOCATOR);
 
 
     DOOM_TEST_CASE(" - doom_list_node_assign\n");
     node_ptr = NULL;
     int32_t aux_int = 6969;
     DOOM_ASSERT(doom_list_node_assign(node_ptr, &aux_int, sizeof(int32_t)) == -1);
-    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
-    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(int32_t)) == sizeof(int32_t));
+    DOOM_ASSERT((node_ptr = doom_list_node_new(DOOMSDAY_C_DEFAULT_ALLOCATOR)) != NULL);
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(int32_t), DOOMSDAY_C_DEFAULT_ALLOCATOR) == sizeof(int32_t));
     DOOM_ASSERT(doom_list_node_assign(node_ptr, NULL, sizeof(int32_t)) == -1);
     DOOM_ASSERT(doom_list_node_assign(node_ptr, (void *)&aux_int, sizeof(int32_t)) == 0);
     DOOM_ASSERT((*((int32_t *)node_ptr->payload)) == aux_int);
-    doom_list_node_deinit(node_ptr);
+    doom_list_node_deinit(node_ptr, DOOMSDAY_C_DEFAULT_DEALLOCATOR);
 
     DOOM_TEST_CASE(" - doom_list_node_get\n");
     node_ptr = NULL;
     float aux_float = 69.69f;
     DOOM_ASSERT(doom_list_node_get(node_ptr) == NULL);
-    DOOM_ASSERT((node_ptr = doom_list_node_new()) != NULL);
+    DOOM_ASSERT((node_ptr = doom_list_node_new(DOOMSDAY_C_DEFAULT_ALLOCATOR)) != NULL);
     DOOM_ASSERT(doom_list_node_get(node_ptr) == NULL);
-    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(float)) == sizeof(float));
+    DOOM_ASSERT(doom_list_node_init(node_ptr, sizeof(float), DOOMSDAY_C_DEFAULT_ALLOCATOR) == sizeof(float));
     DOOM_ASSERT(doom_list_node_assign(node_ptr, (void *)&aux_float, sizeof(float)) == 0);
     DOOM_ASSERT(*((float *)doom_list_node_get(node_ptr)) == aux_float);
-    doom_list_node_deinit(node_ptr);
+    doom_list_node_deinit(node_ptr, DOOMSDAY_C_DEFAULT_DEALLOCATOR);
 
     DOOM_TEST_CASE(" - doom_list_node_insert_after\n");
 

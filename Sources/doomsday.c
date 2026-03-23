@@ -46,7 +46,7 @@ typedef uint8_t byte;
 #else
 #define DOOMSDAY_C_DEFAULT_ALLOCATOR malloc
 #define DOOMSDAY_C_DEFAULT_DEALLOCATOR free
-#endif /* DOOM_STRING_DEALLOCATOR */
+#endif /* DOOMSDAY_C__DEALLOCATOR */
 
 
 #define DOOM_KiB(num) num * 1024
@@ -2008,7 +2008,491 @@ int doom_dynamic_array_pop_front( doom_dynamic_array * da ) {
     return result;
 }
 
+#endif /* DOOMSDAY_C_IMPLEMENTATION */
 
+
+/******************************************************************************/
+/*  DOOMSDAY C LIST                                                           */
+/******************************************************************************/
+
+/* doom list node */
+typedef struct doomsday_c_list_node_t {
+    void * payload;
+    struct doomsday_c_list_node_t * next;
+    struct doomsday_c_list_node_t * prev;
+} doom_list_node;
+
+/* doom list sentry */
+typedef struct doomsday_c_list_sentry_t {
+    uint64_t _data_size;
+    uint64_t _size;
+    void *(*_allocator)(size_t);
+    void (*_deallocator)(void *);
+    struct doomsday_c_list_node_t * first;
+    struct doomsday_c_list_node_t * last;
+} doom_list_sentry;
+
+/* doom list */
+typedef doom_list_sentry doom_list;
+
+
+/* list nodes functionality */
+doom_list_node * doom_list_node_new( void *(*custom_allocator)(size_t) );
+int    doom_list_node_init( doom_list_node * node, uint64_t size, void *(*custom_allocator)(size_t) );
+void   doom_list_node_deinit( doom_list_node * node, void(*custom_deallocator)(void *) );
+int    doom_list_node_assign( doom_list_node * dest, void * payload, uint64_t size );
+void * doom_list_node_get( doom_list_node * node );
+int    doom_list_node_insert_after( doom_list_node * ref, doom_list_node * node );
+int    doom_list_node_insert_before( doom_list_node * ref, doom_list_node * node );
+/* list (sentry) functionality */
+doom_list * doom_list_new( uint64_t data_size );
+doom_list * doom_list_new_alloc( uint64_t data_size, void *(*_custom_allocator)(size_t), void (*_custom_deallocator)(void *) );
+int    doom_list_init( doom_list ** list, uint64_t data_size );
+int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) );
+void   doom_list_deinit( doom_list * list );
+void   doom_list_deinit_ptr( doom_list ** list );
+int    doom_list_push_front( doom_list * list, void * value );
+void   doom_list_deinit( doom_list * list );
+int    doom_list_push_front( doom_list * list, void * value );
+int    doom_list_push_back( doom_list * list, void * value );
+int    doom_list_pop_front( doom_list * list );
+int    doom_list_pop_back( doom_list * list );
+void * doom_list_front( doom_list * list );
+void * doom_list_back( doom_list * list );
+void * doom_list_at( doom_list * list, uint64_t index );
+int    doom_list_insert_at( doom_list * list, void * value, uint64_t index );
+int    doom_list_remove_at( doom_list * list, uint64_t index );
+
+
+#define DOOM_LIST_FOREACH(elem, list, elem_type) \
+    elem=*(elem_type *)list->first->payload; \
+    for (doom_list_node * node_ptr=list->first; \
+         node_ptr != NULL; \
+         node_ptr = node_ptr->next, \
+         (node_ptr!=NULL) ? elem=*(elem_type*)node_ptr->payload : elem \
+         )
+
+
+/*****************************************************************************/
+/* DOOMSDAY C LIST STRIP PREFIX                                              */
+/*****************************************************************************/
+#ifdef DOOMSDAY_C_STRIP_PREFIX
+
+#define list_node_new doom_list_node_new
+#define list_node_init doom_list_node_init
+#define list_node_deinit doom_list_node_deinit
+#define list_node_assign doom_list_node_assign
+#define list_node_get doom_list_node_get
+#define list_node_insert_after doom_list_node_insert_after
+#define list_node_insert_before doom_list_node_insert_before
+#define list_new doom_list_new
+#define list_init doom_list_init
+#define list_push_front doom_list_push_front
+#define list_push_back doom_list_push_back
+#define list_pop_front doom_list_pop_front
+#define list_pop_back doom_list_pop_back
+#define list_front doom_list_front
+#define list_back doom_list_back
+#define list_deinit doom_list_deinit
+#define list_at doom_list_at 
+#define list_insert_at doom_list_insert_at
+#define list_remove_at doom_list_remove_at
+
+#endif /* DOOMSDAY_C_LIST_STRIP_BARRIER */
+
+
+/******************************************************************************/
+/*  DOOMSDAY C LIST NODE - IMPLEMENTATION                                     */
+/******************************************************************************/
+#ifdef DOOMSDAY_C_IMPLEMENTATION
+
+doom_list_node * doom_list_node_new( void *(*custom_allocator)(size_t) ) {
+    doom_list_node * node = (doom_list_node *)custom_allocator(sizeof(doom_list_node));
+    if (node == NULL) {
+        return node;
+    }
+    node->payload = NULL;
+    node->next = NULL;
+    node->prev = NULL;
+    return node;
+}
+
+int doom_list_node_init( doom_list_node * node, uint64_t size, void *(*custom_allocator)(size_t) ) {
+    if (node == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    node->payload = custom_allocator(size);
+    if (node->payload == NULL) {
+        return DOOM_OUT_OF_MEMORY;
+    }
+    return size;
+}
+
+void doom_list_node_deinit( doom_list_node * node, void(*custom_deallocator)(void *) ) {
+    if (node == NULL) {
+        return;
+    }
+    if (node->payload != NULL) {
+        custom_deallocator(node->payload);
+    }
+    custom_deallocator(node);
+}
+
+int doom_list_node_assign( doom_list_node * dest, void * payload, uint64_t size) {
+    if (dest == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    if (dest->payload == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    if (payload == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    memcpy(dest->payload, payload, size);
+    return 0;
+}
+
+void * doom_list_node_get( doom_list_node * node ) {
+    if (node == NULL) {
+        return NULL;
+    }
+    return node->payload;
+}
+
+int doom_list_node_insert_after( doom_list_node * ref, doom_list_node * node ) {
+    doom_list_node * aux;
+    aux = NULL;
+
+    if (ref == NULL || node == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    if (ref->next != NULL) {
+        aux = ref->next;
+    }
+    ref->next = node;
+    node->prev = ref;
+    if (aux != NULL) {
+        node->next = aux;
+        aux->prev = node;
+    }
+    return DOOM_SUCCESS;
+}
+
+int doom_list_node_insert_before( doom_list_node * ref, doom_list_node * node ) {
+    doom_list_node * aux;
+    aux = NULL;
+
+    if (ref == NULL || node == NULL) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+    if (ref->prev != NULL) {
+        aux = ref->next;
+    }
+    ref->prev = node;
+    node->next = ref;
+    if (aux != NULL) {
+        node->prev = aux;
+        aux->next = node;
+    }
+    return DOOM_SUCCESS;
+}
+
+doom_list * doom_list_new( uint64_t data_size ) {
+    doom_list * list = (doom_list *)DOOMSDAY_C_DEFAULT_ALLOCATOR(sizeof(doom_list));
+    if (list == NULL) {
+        return NULL;
+    }
+    list->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
+    list->_deallocator = DOOMSDAY_C_DEFAULT_DEALLOCATOR;
+    list->_size = 0;
+    list->_data_size = data_size;
+    list->first = NULL;
+    list->last = NULL;
+    return list;
+}
+
+doom_list * doom_list_new_alloc( uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) ) {
+    doom_list * list = (doom_list *)custom_allocator(sizeof(doom_list));
+    if (list == NULL) {
+        return NULL;
+    }
+    list->_allocator = custom_allocator; 
+    list->_deallocator = custom_deallocator;
+    list->_size = 0;
+    list->_data_size = data_size;
+    list->first = NULL;
+    list->last = NULL;
+    return list;
+}
+
+int doom_list_init( doom_list ** list, uint64_t data_size ) {
+    doom_list * list_aux;
+    list_aux = (doom_list *)DOOMSDAY_C_DEFAULT_ALLOCATOR(sizeof(doom_list));
+    if (list == NULL) {
+        return -1;
+    }
+    list_aux->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
+    list_aux->_deallocator = DOOMSDAY_C_DEFAULT_DEALLOCATOR;
+    list_aux->_size = 0;
+    list_aux->_data_size = data_size;
+    list_aux->first = NULL;
+    list_aux->last = NULL;
+    *list = list_aux;
+    return 0;
+}
+
+int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) ) {
+    doom_list * list_aux;
+    list_aux = (doom_list *)custom_allocator(sizeof(doom_list));
+    if (list == NULL) {
+        return -1;
+    }
+    list_aux->_allocator = custom_allocator; 
+    list_aux->_deallocator = custom_deallocator; 
+    list_aux->_size = 0;
+    list_aux->_data_size = data_size;
+    list_aux->first = NULL;
+    list_aux->last = NULL;
+    *list = list_aux;
+    return 0;
+}
+
+void doom_list_deinit( doom_list * list ) {
+    if (list == NULL) {
+        return;
+    }
+    while ((doom_list_pop_front(list)) == 0) {}
+    list->_deallocator(list);
+}
+
+void doom_list_deinit_ptr( doom_list ** list_ptr ) {
+    if (list_ptr == NULL) {
+        return;
+    }
+    doom_list_deinit(*list_ptr);
+}
+
+int doom_list_push_front( doom_list * list, void * value ) {
+    if (list == NULL) {
+        return -1;
+    }
+    if (value == NULL) {
+        return -1;
+    }
+    doom_list_node * new_node = doom_list_node_new(list->_allocator);
+    if (new_node == NULL) {
+        return -1;
+    }
+    if ((doom_list_node_init(new_node, list->_data_size, list->_allocator)) == -1) {
+        return -1;
+    }
+    if ((doom_list_node_assign(new_node, value, list->_data_size)) == -1) {
+        return -1;
+    }
+    if (list->_size == 0) {
+        list->first = new_node;
+        list->last = new_node;
+        list->_size++;
+        return 0;
+    }
+    list->first->prev = new_node;
+    new_node->next = list->first;
+    list->first = new_node;
+    list->_size++;
+    return 0;
+}
+
+int doom_list_push_back( doom_list * list, void * value ) {
+    if (list == NULL) {
+        return -1;
+    }
+    if (value == NULL) {
+        return -1;
+    }
+    doom_list_node * new_node = doom_list_node_new(list->_allocator);
+    if (new_node == NULL) {
+        return -1;
+    }
+    if ((doom_list_node_init(new_node, list->_data_size, list->_allocator)) == -1) {
+        return -1;
+    }
+    if ((doom_list_node_assign(new_node, value, list->_data_size)) == -1) {
+        return -1;
+    }
+    if (list->_size == 0) {
+        list->first = new_node;
+        list->last = new_node;
+        list->_size++;
+        return 0;
+    }
+    list->last->next = new_node;
+    new_node->prev = list->last;
+    list->last = new_node;
+    list->_size++;
+    return 0;
+}
+
+int doom_list_pop_front( doom_list * list ) {
+    doom_list_node * aux;
+    if (list == NULL) {
+        return -1;
+    }
+    if (list->_size == 0) {
+        return -1;
+    }
+    aux = list->first;
+    list->first = list->first->next;
+    doom_list_node_deinit(aux, list->_deallocator);
+    list->_size--;
+    if (list->_size == 0) {
+        list->last = NULL;
+    }
+    return 0;
+}
+
+int doom_list_pop_back( doom_list * list ) {
+    doom_list_node * aux;
+    if (list == NULL) {
+        return -1;
+    }
+    if (list->_size == 0) {
+        return -1;
+    }
+    aux = list->last;
+    list->last = list->last->prev;
+    doom_list_node_deinit(aux, list->_deallocator);
+    list->_size--;
+    if (list->_size == 0) {
+        list->first = NULL;
+    }
+    return 0;
+}
+
+void * doom_list_front( doom_list * list ) {
+    if (list == NULL) {
+        return NULL;
+    }
+    if (list->_size == 0) {
+        return NULL;
+    }
+    return list->first->payload;
+}
+
+void * doom_list_back( doom_list * list ) {
+    if (list == NULL) {
+        return NULL;
+    }
+    if (list->_size == 0) {
+        return NULL;
+    }
+    return list->last->payload;
+}
+
+void * doom_list_at( doom_list * list, uint64_t index ) {
+    if (list == NULL) {
+        return NULL;
+    }
+    if (index < 0 || index >= list->_size) {
+        return NULL;
+    }
+    if (index <= list->_size/2) {
+        uint64_t current_index = 0;
+        doom_list_node * node_ptr = list->first;
+        for (; current_index < index && node_ptr != NULL; 
+               current_index++, node_ptr = node_ptr->next) {}
+        return node_ptr->payload;
+    }
+    uint64_t current_index = list->_size-1;
+    doom_list_node * node_ptr = list->last;
+    for (; current_index > index && node_ptr != NULL; 
+           current_index--, node_ptr = node_ptr->prev) {}
+    return node_ptr->payload;
+}
+
+int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
+    if (list == NULL) {
+        return -1;
+    } 
+    if (value == NULL) {
+        return -1;
+    }
+    if (index < 0 || index > list->_size) {
+        return -1;
+    }
+
+    if (index == 0) {
+        return doom_list_push_front(list, value);
+    }
+    if (index == list->_size) {
+        return doom_list_push_back(list, value);
+    }
+
+    doom_list_node * payload_ptr = doom_list_node_new(list->_allocator);
+    if(payload_ptr == NULL) { 
+        return -1; 
+    } 
+    if ((doom_list_node_init(payload_ptr, list->_data_size, list->_allocator)) == -1) {
+        return -1;
+    }
+    if ((doom_list_node_assign(payload_ptr, value, list->_data_size)) != 0) {
+        return -1;
+    }
+
+    index = index-1;
+    doom_list_node * node_ptr;
+    if (index <= list->_size/2) {
+        uint64_t current_index = 0;
+        node_ptr = list->first;
+        for (; current_index < index && node_ptr != NULL; 
+               current_index++, node_ptr = node_ptr->next) {}
+    } else {
+        uint64_t current_index = list->_size-1;
+        node_ptr = list->last;
+        for (; current_index > index && node_ptr != NULL; 
+               current_index--, node_ptr = node_ptr->prev) {}
+    }
+    if (doom_list_node_insert_after(node_ptr, payload_ptr) != 0) {
+        return -1;
+    }
+
+    list->_size++;
+    return 0;
+}
+
+int doom_list_remove_at( doom_list * list, uint64_t index) {
+    if (list == NULL) {
+        return -1;
+    } 
+    if (index < 0 || index >= list->_size) {
+        return -1;
+    }
+
+    if (index == 0) {
+        return doom_list_pop_front(list);
+    }
+    if (index == list->_size-1) {
+        return doom_list_pop_back(list);
+    }
+
+    doom_list_node * node_ptr;
+    if (index <= list->_size/2) {
+        uint64_t current_index = 0;
+        node_ptr = list->first;
+        for (; current_index < index && node_ptr != NULL; 
+               current_index++, node_ptr = node_ptr->next) {}
+    } else {
+        uint64_t current_index = list->_size-1;
+        node_ptr = list->last;
+        for (; current_index > index && node_ptr != NULL; 
+               current_index--, node_ptr = node_ptr->prev) {}
+    }
+    node_ptr->prev->next = node_ptr->next;
+    node_ptr->next->prev = node_ptr->prev;
+    doom_list_node_deinit(node_ptr, list->_deallocator);
+
+    list->_size--;
+    return 0;
+}
 
 #endif /* DOOMSDAY_C_IMPLEMENTATION */
 
