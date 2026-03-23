@@ -2008,7 +2008,8 @@ int doom_dynamic_array_pop_front( doom_dynamic_array * da ) {
     return result;
 }
 
-#endif /* DOOMSDAY_C_IMPLEMENTATION */
 
+
+#endif /* DOOMSDAY_C_IMPLEMENTATION */
 
 #endif /* DOOMSDAY_C */
