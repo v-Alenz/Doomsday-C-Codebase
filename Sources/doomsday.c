@@ -1011,7 +1011,6 @@ int doom_string_init_copy ( char ** string, char const * restrict c_string ) {
     *string = (char *)(aux_str + 1);
     memset((void *)*string, 0, c_string_size+1);
     memcpy((void *)*string, c_string, c_string_size);
-    printf("%s\n", (*string));
     return DOOM_SUCCESS;
 }
 
@@ -1510,7 +1509,7 @@ int doom_dynamic_array_init_size( doom_dynamic_array * da, int64_t sizeof_elem, 
     } 
 
     da_header->_sizeof_elem = sizeof_elem;
-    da_header->_array_size = 0;
+    da_header->_array_size = max_size;
     da_header->_array_max_size = max_size;
     da_header->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
     da_header->_deallocator = DOOMSDAY_C_DEFAULT_DEALLOCATOR;
@@ -2125,7 +2124,7 @@ int doom_list_node_init( doom_list_node * node, uint64_t size, void *(*custom_al
     if (node->payload == NULL) {
         return DOOM_OUT_OF_MEMORY;
     }
-    return size;
+    return DOOM_SUCCESS;
 }
 
 void doom_list_node_deinit( doom_list_node * node, void(*custom_deallocator)(void *) ) {
@@ -2238,7 +2237,7 @@ int doom_list_init( doom_list ** list, uint64_t data_size ) {
     list_aux->first = NULL;
     list_aux->last = NULL;
     *list = list_aux;
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) ) {
@@ -2254,7 +2253,7 @@ int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*cust
     list_aux->first = NULL;
     list_aux->last = NULL;
     *list = list_aux;
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 void doom_list_deinit( doom_list * list ) {
@@ -2274,21 +2273,25 @@ void doom_list_deinit_ptr( doom_list ** list_ptr ) {
 
 int doom_list_push_front( doom_list * list, void * value ) {
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     if (value == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
+    int result = DOOM_SUCCESS;
     doom_list_node * new_node = doom_list_node_new(list->_allocator);
     if (new_node == NULL) {
-        return -1;
+        return DOOM_OUT_OF_MEMORY;
     }
-    if ((doom_list_node_init(new_node, list->_data_size, list->_allocator)) == -1) {
-        return -1;
+    result  = doom_list_node_init(new_node, list->_data_size, list->_allocator);
+    if (result != DOOM_SUCCESS) {
+        return result;
     }
-    if ((doom_list_node_assign(new_node, value, list->_data_size)) == -1) {
-        return -1;
+    result = doom_list_node_assign(new_node, value, list->_data_size);
+    if (result != DOOM_SUCCESS) {
+        return result;
     }
+
     if (list->_size == 0) {
         list->first = new_node;
         list->last = new_node;
@@ -2299,26 +2302,30 @@ int doom_list_push_front( doom_list * list, void * value ) {
     new_node->next = list->first;
     list->first = new_node;
     list->_size++;
-    return 0;
+    return result;
 }
 
 int doom_list_push_back( doom_list * list, void * value ) {
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     if (value == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
+    int result = DOOM_SUCCESS;
     doom_list_node * new_node = doom_list_node_new(list->_allocator);
     if (new_node == NULL) {
-        return -1;
+        return DOOM_OUT_OF_MEMORY;
     }
-    if ((doom_list_node_init(new_node, list->_data_size, list->_allocator)) == -1) {
-        return -1;
+    result = doom_list_node_init(new_node, list->_data_size, list->_allocator);
+    if (result != DOOM_SUCCESS) {
+        return result;
     }
-    if ((doom_list_node_assign(new_node, value, list->_data_size)) == -1) {
-        return -1;
+    result = doom_list_node_assign(new_node, value, list->_data_size);
+    if (result != DOOM_SUCCESS) {
+        return result;
     }
+
     if (list->_size == 0) {
         list->first = new_node;
         list->last = new_node;
@@ -2329,17 +2336,18 @@ int doom_list_push_back( doom_list * list, void * value ) {
     new_node->prev = list->last;
     list->last = new_node;
     list->_size++;
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 int doom_list_pop_front( doom_list * list ) {
     doom_list_node * aux;
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     if (list->_size == 0) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
+
     aux = list->first;
     list->first = list->first->next;
     doom_list_node_deinit(aux, list->_deallocator);
@@ -2347,16 +2355,16 @@ int doom_list_pop_front( doom_list * list ) {
     if (list->_size == 0) {
         list->last = NULL;
     }
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 int doom_list_pop_back( doom_list * list ) {
     doom_list_node * aux;
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     if (list->_size == 0) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     aux = list->last;
     list->last = list->last->prev;
@@ -2365,7 +2373,7 @@ int doom_list_pop_back( doom_list * list ) {
     if (list->_size == 0) {
         list->first = NULL;
     }
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 void * doom_list_front( doom_list * list ) {
@@ -2411,13 +2419,13 @@ void * doom_list_at( doom_list * list, uint64_t index ) {
 
 int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     } 
     if (value == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     }
     if (index < 0 || index > list->_size) {
-        return -1;
+        return DOOM_INVALID_ARGUMENT;
     }
 
     if (index == 0) {
@@ -2427,15 +2435,18 @@ int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
         return doom_list_push_back(list, value);
     }
 
+    int result;
     doom_list_node * payload_ptr = doom_list_node_new(list->_allocator);
     if(payload_ptr == NULL) { 
-        return -1; 
+        return DOOM_OUT_OF_MEMORY; 
     } 
-    if ((doom_list_node_init(payload_ptr, list->_data_size, list->_allocator)) == -1) {
-        return -1;
+    result = doom_list_node_init(payload_ptr, list->_data_size, list->_allocator);
+    if (result != DOOM_SUCCESS) {
+        return DOOM_SUCCESS;
     }
-    if ((doom_list_node_assign(payload_ptr, value, list->_data_size)) != 0) {
-        return -1;
+    result = doom_list_node_assign(payload_ptr, value, list->_data_size);
+    if (result != DOOM_SUCCESS) {
+        return DOOM_SUCCESS;
     }
 
     index = index-1;
@@ -2451,20 +2462,21 @@ int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
         for (; current_index > index && node_ptr != NULL; 
                current_index--, node_ptr = node_ptr->prev) {}
     }
-    if (doom_list_node_insert_after(node_ptr, payload_ptr) != 0) {
-        return -1;
+    result = doom_list_node_insert_after(node_ptr, payload_ptr);
+    if (result != DOOM_SUCCESS) {
+        return result;
     }
 
     list->_size++;
-    return 0;
+    return result;
 }
 
 int doom_list_remove_at( doom_list * list, uint64_t index) {
     if (list == NULL) {
-        return -1;
+        return DOOM_ARGUMENT_IS_NULL;
     } 
     if (index < 0 || index >= list->_size) {
-        return -1;
+        return DOOM_INVALID_ARGUMENT;
     }
 
     if (index == 0) {
@@ -2491,7 +2503,7 @@ int doom_list_remove_at( doom_list * list, uint64_t index) {
     doom_list_node_deinit(node_ptr, list->_deallocator);
 
     list->_size--;
-    return 0;
+    return DOOM_SUCCESS;
 }
 
 #endif /* DOOMSDAY_C_IMPLEMENTATION */
