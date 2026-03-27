@@ -16,8 +16,8 @@
 /* along with this program.  If not, see <http://www.gnu.org/licenses/>.      */
 /******************************************************************************/
 
-#ifndef DOOMSDAY_C
-#define DOOMSDAY_C
+#ifndef DOOMSDAY_H
+#define DOOMSDAY_H
 
 
 #include <alloca.h>
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 
 
 /*****************************************************************************/
@@ -38,6 +39,7 @@ typedef uint8_t byte;
 #define DOOMSDAY_C_IMPLEMENTATION
 #define DOOMSDAY_C_STRIP_PREFIX
 #define DOOMSDAY_C_ENABLE_COMPILER_MAGIC
+#define DOOMSDAY_C_ENABLE_GENERICS
 
 #ifdef DOOMSDAY_C_DEFAULT_ALLOCATOR
 #ifndef DOOMSDAY_C_DEFAULT_DEALLOCATOR
@@ -48,10 +50,25 @@ typedef uint8_t byte;
 #define DOOMSDAY_C_DEFAULT_DEALLOCATOR free
 #endif /* DOOMSDAY_C__DEALLOCATOR */
 
+#ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC
+#ifndef __has_attribute
+#   define __has_attribute(x) 0
+#endif
+#if __has_attribute(cleanup)
+#   define DOOM_DEFER(x) __attribute__((cleanup(x)))
+#else
+#   warning "COMPILER MISSING CLEANUP FEATURE! Memory leacks are possible!"
+#   define DOOM_DEFER(x) 
+#endif
+#endif /* ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC */
+
 
 #define DOOM_KiB(num) num * 1024
 #define DOOM_MiB(num) num * 1048576
 #define DOOM_GiB(num) num * 1073741824 
+
+#define DOOM_TRUE 1
+#define DOOM_FALSE 0
 
 
 /*****************************************************************************/
@@ -1378,6 +1395,7 @@ int doom_dynamic_array_expand( doom_dynamic_array * da );
 int doom_dynamic_array_resize( doom_dynamic_array * da, int64_t const size );
 int doom_dynamic_array_fit( doom_dynamic_array * da );
 int doom_dynamic_array_reserve( doom_dynamic_array * da, int64_t const size );
+void * doom_dynamic_array_at( doom_dynamic_array da, int64_t index );
 /* Stack and Queue operations */
 void * doom_dynamic_array_back( void const * restrict da );
 int doom_dynamic_array_push_back( doom_dynamic_array * da, void const * restrict value );
@@ -1800,6 +1818,25 @@ int doom_dynamic_array_resize( doom_dynamic_array * da, int64_t const size ) {
     return result;
 }
 
+void * doom_dynamic_array_at( doom_dynamic_array da, int64_t index ) {
+    if (da == NULL) {
+        return NULL;
+    }
+    int result;
+    doom_dynamic_array_struct da_struct;
+    result = doom_dynamic_array_get_struct(&da_struct, da);
+    if (result != DOOM_SUCCESS) {
+        return NULL;
+    }
+    if (index < 0 || index >= *da_struct._array_size) {
+        return NULL;
+    }
+
+    byte * da_ptr = (byte *)da;
+    da_ptr += index * (*da_struct._sizeof_elem);
+    return (void *)da_ptr;
+} 
+
 int doom_dynamic_array_fit( doom_dynamic_array * da ) {
     if (da == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
@@ -1924,7 +1961,7 @@ int doom_dynamic_array_pop_back( doom_dynamic_array * da ) {
     }
     int result = DOOM_SUCCESS;
     doom_dynamic_array_struct da_struct;
-    result = doom_dynamic_array_get_struct(&da_struct,*da);
+    result = doom_dynamic_array_get_struct(&da_struct, da);
     if (result != DOOM_SUCCESS) {
         return result;
     }
@@ -2050,7 +2087,6 @@ int    doom_list_init( doom_list ** list, uint64_t data_size );
 int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) );
 void   doom_list_deinit( doom_list * list );
 void   doom_list_deinit_ptr( doom_list ** list );
-int    doom_list_push_front( doom_list * list, void * value );
 void   doom_list_deinit( doom_list * list );
 int    doom_list_push_front( doom_list * list, void * value );
 int    doom_list_push_back( doom_list * list, void * value );
@@ -2062,6 +2098,21 @@ void * doom_list_at( doom_list * list, uint64_t index );
 int    doom_list_insert_at( doom_list * list, void * value, uint64_t index );
 int    doom_list_remove_at( doom_list * list, uint64_t index );
 
+/******************************************************************************/
+/*  DOOMSDAY C LIST MACROS                                                    */
+/******************************************************************************/
+
+#ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC
+#ifndef __has_attribute
+#   define __has_attribute(x) 0
+#endif
+#if __has_attribute(cleanup)
+#   define DOOM_LIST_DEFER_DEINIT __attribute__((cleanup(doom_list_deinit_ptr)))
+#else
+#   warning "COMPILER MISSING CLEANUP FEATURE! Memory leacks are possible!"
+#   define DOOM_LIST_DEFER_DEINIT 
+#endif
+#endif /* ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC */
 
 #define DOOM_LIST_FOREACH(elem, list, elem_type) \
     elem=*(elem_type *)list->first->payload; \
@@ -2070,7 +2121,6 @@ int    doom_list_remove_at( doom_list * list, uint64_t index );
          node_ptr = node_ptr->next, \
          (node_ptr!=NULL) ? elem=*(elem_type*)node_ptr->payload : elem \
          )
-
 
 /*****************************************************************************/
 /* DOOMSDAY C LIST STRIP PREFIX                                              */
@@ -2508,4 +2558,49 @@ int doom_list_remove_at( doom_list * list, uint64_t index) {
 
 #endif /* DOOMSDAY_C_IMPLEMENTATION */
 
-#endif /* DOOMSDAY_C */
+
+/******************************************************************************/
+/*  DOOMSDAY C GENERICS                                                       */
+/******************************************************************************/
+
+#ifdef DOOMSDAY_C_ENABLE_GENERICS
+
+#define doom_back(doom_collection) _Generic((doom_collection),\
+        doom_list *: doom_list_back,\
+        doom_dynamic_array: doom_dynamic_array_back\
+        )(doom_collection)
+
+#define doom_front(doom_collection) _Generic((doom_collection),\
+        doom_list *: doom_list_front,\
+        default: doom_dynamic_array_front\
+        )(doom_collection)
+
+#define doom_pop_back(doom_collection) _Generic((doom_collection),\
+        doom_list *: doom_list_pop_back,\
+        default: doom_dynamic_array_pop_back\
+        )(doom_collection)
+
+#define doom_pop_front(doom_collection) _Generic((doom_collection),\
+        doom_list *: doom_list_pop_front,\
+        default: doom_dynamic_array_pop_front\
+        )(doom_collection)
+
+#define doom_push_back(doom_collection) _Generic((doom_collection),\
+        doom_list *: doom_list_push_back,\
+        default: doom_dynamic_array_push_back\
+        )(doom_collection)
+
+#define doom_push_front(doom_collection) _Generic((doom_collection)\
+        doom_list *: doom_list_push_front,\
+        default: doom_dynamic_array_push_front\
+        )(doom_collection)
+
+#define doom_at(doom_collection, index) _Generic((doom_collection)\
+        doom_list *: doom_list_at\
+        default: doom_dynamic_array_at\
+        )(doom_collection, index)
+
+#endif
+
+
+#endif /* DOOMSDAY_H */

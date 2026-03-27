@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../Sources/doomsday.c"
+#include "../Sources/doomsday.h"
 
 
 #define DOOM_ASSERT(prop) do{assert(prop); asserts_count++;}while(0)
