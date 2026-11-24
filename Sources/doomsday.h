@@ -20,7 +20,6 @@
 #define DOOMSDAY_H
 
 
-#include <alloca.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -63,9 +62,9 @@ typedef uint8_t byte;
 #endif /* ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC */
 
 
-#define DOOM_KiB(num) num * 1024
-#define DOOM_MiB(num) num * 1048576
-#define DOOM_GiB(num) num * 1073741824 
+#define DOOM_KiB(num) ((num) * 1024)
+#define DOOM_MiB(num) ((num) * 1048576)
+#define DOOM_GiB(num) ((num) * 1073741824) 
 
 #define DOOM_TRUE 1
 #define DOOM_FALSE 0
@@ -100,6 +99,7 @@ typedef struct doomsday_c_memory_arena_chunk_t {
     int64_t * _id;
     uint64_t * _size;
     uint64_t * _prev_size;
+    int64_t * _freed;
     byte * _memory;
 } doom_memory_arena_chunk;
 
@@ -118,7 +118,7 @@ void doom_memory_arena_free( doom_memory_arena * arena, void * memory );
 #define memory_arena_init           doom_memory_arena_init
 #define memory_arena_new            doom_memory_arena_new
 #define memory_arena_get_chunk_info doom_memory_arena_get_chunk_info
-#define memory_arean_malloc         doom_memory_arena_malloc
+#define memory_arena_malloc         doom_memory_arena_malloc
 #define memory_arena_free           doom_memory_arena_free
 
 #endif /* DOOMSDAY_C_STRIP_PREFIX */
@@ -166,9 +166,10 @@ int doom_memory_arena_get_chunk_info( doom_memory_arena_chunk * chunk, void * me
         return -1;
     }
     
-    chunk->_id = (int64_t *)(((byte *)memory)-24);
-    chunk->_size = (uint64_t *)(((byte *)memory)-16);
-    chunk->_prev_size = (uint64_t *)(((byte *)memory)-8);
+    chunk->_id = (int64_t *)(((byte *)memory)-32);
+    chunk->_size = (uint64_t *)(((byte *)memory)-24);
+    chunk->_prev_size = (uint64_t *)(((byte *)memory)-16);
+    chunk->_freed = (int64_t *)(((byte *)memory)-8);
     chunk->_memory = (byte *)memory;
 
     return 0;
@@ -195,12 +196,15 @@ void * doom_memory_arena_malloc( doom_memory_arena * arena, uint64_t size ) {
     arena->_base_ptr = arena->_base_ptr + 8;
     allocation_chunk._prev_size = (uint64_t *)arena->_base_ptr;
     arena->_base_ptr = arena->_base_ptr + 8;
-    allocation_chunk._memory = arena->_base_ptr; 
+    allocation_chunk._freed = (int64_t *)arena->_base_ptr;
+    arena->_base_ptr = arena->_base_ptr + 8;
+    allocation_chunk._memory = arena->_base_ptr;
     arena->_base_ptr = arena->_base_ptr + size;
 
     *allocation_chunk._id = arena->_last_chunk_id + 1;
     *allocation_chunk._size = size;
     *allocation_chunk._prev_size = arena->_last_chunk_size;
+    *allocation_chunk._freed = 0;
     arena->_last_chunk_id = arena->_last_chunk_id + 1;
     arena->_last_chunk_size = size;
 
@@ -217,9 +221,7 @@ void doom_memory_arena_free( doom_memory_arena * arena, void * memory ) {
 
     /* if this chunk is not on top of the heap */
     if (*memory_chunk_info._id != arena->_last_chunk_id) {
-        doom_memory_arena_chunk next_chunk_info;
-        doom_memory_arena_get_chunk_info(&next_chunk_info, (void *)(((byte *) memory)+*memory_chunk_info._size+24));
-        *memory_chunk_info._id = *next_chunk_info._id;
+        *memory_chunk_info._freed = 1;
         return;
     }
     /* else */
@@ -234,8 +236,8 @@ void doom_memory_arena_free( doom_memory_arena * arena, void * memory ) {
     }
     /* else we trace back for any free memory hanging for deletion */
     doom_memory_arena_chunk prev_chunk_info;
-    doom_memory_arena_get_chunk_info(&prev_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 24));
-    while (*memory_chunk_info._id == *prev_chunk_info._id) {
+    doom_memory_arena_get_chunk_info(&prev_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 32));
+    while (*prev_chunk_info._freed == 1) {
         arena->_last_chunk_size = *prev_chunk_info._prev_size;
         arena->_last_chunk_id = arena->_last_chunk_id-1;
         arena->_base_ptr = (byte *)prev_chunk_info._id;
@@ -243,8 +245,8 @@ void doom_memory_arena_free( doom_memory_arena * arena, void * memory ) {
         if (arena->_memory_used_size == 0 || arena->_last_chunk_id == -1 || arena->_memory == arena->_base_ptr) {
             return;
         }
-        doom_memory_arena_get_chunk_info(&memory_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 24));
-        doom_memory_arena_get_chunk_info(&prev_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 24));
+        doom_memory_arena_get_chunk_info(&memory_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 32));
+        doom_memory_arena_get_chunk_info(&prev_chunk_info, memory_chunk_info._memory - (*memory_chunk_info._prev_size + 32));
     }
 }
 
@@ -313,6 +315,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     return str;                                                             \
 }                                                                           \
@@ -340,6 +343,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     return str;                                                             \
@@ -371,6 +375,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -406,6 +411,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -445,6 +451,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -488,6 +495,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -505,7 +513,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
             f_args->arg2,                                                   \
             f_args->arg3,                                                   \
             f_args->arg4,                                                   \
-            f_args->arg4                                                    \
+            f_args->arg5                                                    \
          );                                                                 \
     DOOM_THREAD_DEALLOCATOR(args);                                          \
     return NULL;                                                            \
@@ -515,9 +523,10 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
 #define DOOM_THREAD_FUNCTION_WRAP( t_ret, fname )                           \
 void * fname##_doom_thread_wrapper( void * args ) {                         \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { return NULL; }                                    \
     *result = fname();                                                      \
     return (void *) result;                                                 \
-}  
+}
 
 #define DOOM_THREAD_FUNCTION_WRAP_1( t_ret, fname, t_0 )                    \
 struct fname##_doom_thread_args_decoder {                                   \
@@ -531,6 +540,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     return str;                                                             \
 }                                                                           \
@@ -538,6 +548,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0                                                    \
          );                                                                 \
@@ -559,6 +570,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     return str;                                                             \
@@ -567,6 +579,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0,                                                   \
             f_args->arg1                                                    \
@@ -591,6 +604,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -600,6 +614,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0,                                                   \
             f_args->arg1,                                                   \
@@ -627,6 +642,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -637,6 +653,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0,                                                   \
             f_args->arg1,                                                   \
@@ -667,6 +684,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -678,6 +696,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0,                                                   \
             f_args->arg1,                                                   \
@@ -711,6 +730,7 @@ fname##_doom_thread_args_pack(                                              \
         (struct fname##_doom_thread_args_decoder *)DOOM_THREAD_ALLOCATOR(   \
                 sizeof(struct fname##_doom_thread_args_decoder)             \
                 );                                                          \
+    if (str == NULL) { return NULL; }                                       \
     str->arg0 = arg0;                                                       \
     str->arg1 = arg1;                                                       \
     str->arg2 = arg2;                                                       \
@@ -723,6 +743,7 @@ void * fname##_doom_thread_wrapper( void * args ) {                         \
     struct fname##_doom_thread_args_decoder * f_args =                      \
         (struct fname##_doom_thread_args_decoder *) args;                   \
     t_ret * result = (t_ret *) DOOM_THREAD_ALLOCATOR(sizeof(t_ret));        \
+    if (result == NULL) { DOOM_THREAD_DEALLOCATOR(args); return NULL; }     \
     *result = fname(                                                        \
             f_args->arg0,                                                   \
             f_args->arg1,                                                   \
@@ -784,6 +805,7 @@ doom_thread * doom_thread_new( void *(*start_routine)(void *),
     }
     result = pthread_create(newthread, NULL, start_routine, arg);
     if (result != 0) {
+        DOOM_THREAD_DEALLOCATOR(newthread);
         return NULL;
     }
     return newthread;
@@ -798,10 +820,12 @@ doom_thread * doom_thread_new_detached( void *(*start_routine)(void *), void *re
     }
     result = pthread_create(newthread, NULL, start_routine, arg);
     if (result != 0) {
+        DOOM_THREAD_DEALLOCATOR(newthread);
         return NULL;
     }
     result = pthread_detach(*newthread);
     if (result != 0) {
+        DOOM_THREAD_DEALLOCATOR(newthread);
         return NULL;
     }
     return newthread;
@@ -996,7 +1020,7 @@ int doom_string_init_size ( char ** string, size_t const size ) {
     doom_string_header * aux_str = NULL;
     aux_str = (doom_string_header *)DOOMSDAY_C_DEFAULT_ALLOCATOR(
             sizeof(doom_string_header) + 
-            (sizeof(char) * size+1)
+            (sizeof(char) * (size+1))
              ); 
     if(aux_str == NULL) {
         return DOOM_OUT_OF_MEMORY; 
@@ -1058,7 +1082,7 @@ int doom_string_init_size_alloc ( char ** string, size_t const size, void *(*cus
     doom_string_header * aux_str = NULL;
     aux_str = (doom_string_header *)custom_allocator(
             sizeof(doom_string_header) + 
-            (sizeof(char) * size+1)
+            (sizeof(char) * (size+1))
              ); 
     if(aux_str == NULL) {
         return DOOM_OUT_OF_MEMORY; 
@@ -1166,7 +1190,18 @@ int doom_string_resize( char ** string, size_t const size ) {
     if (*string == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
     }
-    char * aux_str = doom_string_new_size(size);
+    doom_string_struct string_struct;
+    if (doom_string_get_struct(&string_struct, *string) != DOOM_SUCCESS) {
+        return DOOM_ARGUMENT_IS_NULL;
+    }
+
+    char * aux_str = doom_string_new_size_alloc(
+            size, 
+            *string_struct._allocator, 
+            *string_struct._deallocator);
+    if (aux_str == NULL) {
+        return DOOM_OUT_OF_MEMORY;
+    }
     int64_t aux_len = doom_string_get_size(*string);
     memcpy(aux_str, *string, (aux_len < size) ? aux_len : size);
     doom_string_deinit(*string);
@@ -1186,8 +1221,7 @@ int doom_string_safe_resize( char ** string, size_t const size ) {
         return DOOM_INVALID_ARGUMENT;
     }
 
-    doom_string_resize(string, size);
-    return DOOM_SUCCESS;
+    return doom_string_resize(string, size);
 }
 
 int doom_string_fit( char ** string ) {
@@ -1219,9 +1253,10 @@ char * doom_string_stpcpy( char ** dst, char const * restrict src ) {
         return NULL;
     }
     if (doom_string_get_size(*dst) < doom_string_strlen(src)) {
-        doom_string_resize(dst, doom_string_strlen(src));
+        if (doom_string_resize(dst, doom_string_strlen(src)) != DOOM_SUCCESS) {
+            return NULL;
+        }
     }
-
     return stpcpy(*dst, src);
 }
 
@@ -1231,10 +1266,14 @@ char * doom_string_strcat( char ** dst, char const * restrict src ) {
     }
     if (doom_string_get_size(*dst) <
         doom_string_strlen(*dst) + doom_string_strlen(src)) {
+        if (
         doom_string_resize(
                 dst,
                 doom_string_strlen(*dst)+doom_string_strlen(src)
-                );
+                )
+        != DOOM_SUCCESS) {
+            return NULL;
+        }
     }
 
     return strcat(*dst, src);
@@ -1281,7 +1320,9 @@ char * doom_string_strcpy( char ** dst, char const * restrict src ) {
         return NULL;
     }
     if (doom_string_get_size(*dst) < doom_string_strlen(src)) {
-        doom_string_resize(dst, doom_string_strlen(src));
+        if (doom_string_resize(dst, doom_string_strlen(src)) != DOOM_SUCCESS) {
+            return NULL;
+        }
     }
 
     return strcpy(*dst, src);
@@ -1309,7 +1350,7 @@ size_t doom_string_strlen( char const * s ) {
 
 char * doom_string_strpbrk( char const * s, char const * accept ) {
     if (s == NULL || accept == NULL) {
-        return 0;
+        return NULL;
     }
 
     return (char *)strpbrk(s, accept);
@@ -1421,10 +1462,9 @@ int doom_dynamic_array_pop_front( doom_dynamic_array * da );
 #endif /* ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC */
 
 #define DOOM_DYNAMIC_ARRAY_FOREACH(elem, array) \
-    elem = array[0]; \
-    for(uint64_t array_index=0; \
-        array_index<doom_dynamic_array_get_size(array); \
-        array_index++, elem = array[array_index] \
+    for(uint64_t array_index=0, _da_size=(uint64_t)doom_dynamic_array_get_size(array); \
+        array_index < _da_size && (elem = (array)[array_index], 1); \
+        array_index++ \
         )
 
 /*****************************************************************************/
@@ -1444,9 +1484,9 @@ int doom_dynamic_array_pop_front( doom_dynamic_array * da );
 #define dynamic_array_new doom_dynamic_array_new
 #define dynamic_array_new_c doom_dynamic_array_new_copy
 #define dynamic_array_new_s doom_dynamic_array_new_size
-#define dynamic_array_new_a doom_dynamic_array_new
-#define dynamic_array_new_c_a doom_dynamic_array_new_copy
-#define dynamic_array_new_s_a doom_dynamic_array_new_size
+#define dynamic_array_new_a doom_dynamic_array_new_alloc
+#define dynamic_array_new_c_a doom_dynamic_array_new_copy_alloc
+#define dynamic_array_new_s_a doom_dynamic_array_new_size_alloc
 #define dynamic_array_get_elem_size doom_dynamic_array_get_elem_size
 #define dynamic_array_get_size doom_dynamic_array_get_size
 #define dynamic_array_get_max_size doom_dynamic_array_get_max_size
@@ -1508,7 +1548,7 @@ int doom_dynamic_array_init( doom_dynamic_array * da, int64_t sizeof_elem) {
     da_header->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
     da_header->_deallocator = DOOMSDAY_C_DEFAULT_DEALLOCATOR;
     *da = (doom_dynamic_array)(da_header + 1);  
-    memset(*da, 0, da_header->_array_max_size);
+    memset(*da, 0, da_header->_array_max_size * da_header->_sizeof_elem);
 
     return DOOM_SUCCESS;
 }
@@ -1532,7 +1572,7 @@ int doom_dynamic_array_init_size( doom_dynamic_array * da, int64_t sizeof_elem, 
     da_header->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
     da_header->_deallocator = DOOMSDAY_C_DEFAULT_DEALLOCATOR;
     *da = (doom_dynamic_array)(da_header + 1);  
-    memset(*da, 0, da_header->_array_max_size);
+    memset(*da, 0, da_header->_array_max_size*da_header->_sizeof_elem);
 
     return DOOM_SUCCESS;
 }
@@ -1581,7 +1621,7 @@ int doom_dynamic_array_init_alloc( doom_dynamic_array * da, int64_t const sizeof
     if (sizeof_elem <= 0) {
         return DOOM_INVALID_ARGUMENT;
     }
-    if (custom_allocator == NULL || custom_allocator == NULL) {
+    if (custom_allocator == NULL || custom_deallocator == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
     }
     doom_dynamic_array_header * da_header;
@@ -1599,7 +1639,7 @@ int doom_dynamic_array_init_alloc( doom_dynamic_array * da, int64_t const sizeof
     da_header->_allocator = custom_allocator;
     da_header->_deallocator = custom_deallocator;
     *da = (doom_dynamic_array)(da_header + 1);  
-    memset(*da, 0, da_header->_array_max_size);
+    memset(*da, 0, da_header->_array_max_size*da_header->_sizeof_elem);
 
     return DOOM_SUCCESS;
 }
@@ -1608,7 +1648,7 @@ int doom_dynamic_array_init_size_alloc( doom_dynamic_array * da, int64_t const s
     if (sizeof_elem <= 0 || max_size <= 0) {
         return DOOM_INVALID_ARGUMENT;
     }
-    if (custom_allocator == NULL || custom_allocator == NULL) {
+    if (custom_allocator == NULL || custom_deallocator == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
     }
     doom_dynamic_array_header * da_header;
@@ -1626,7 +1666,7 @@ int doom_dynamic_array_init_size_alloc( doom_dynamic_array * da, int64_t const s
     da_header->_allocator = custom_allocator;
     da_header->_deallocator = custom_deallocator;
     *da = (doom_dynamic_array)(da_header + 1);  
-    memset(*da, 0, da_header->_array_max_size);
+    memset(*da, 0, da_header->_array_max_size*da_header->_sizeof_elem);
 
     return DOOM_SUCCESS;
 }
@@ -1854,6 +1894,9 @@ int doom_dynamic_array_fit( doom_dynamic_array * da ) {
         doom_dynamic_array da_new = NULL;
         doom_dynamic_array_struct da_new_struct;
         result = doom_dynamic_array_init_copy_alloc(&da_new, *da_struct._sizeof_elem, *da, new_size, *da_struct._allocator, *da_struct._deallocator);
+        if (result != DOOM_SUCCESS) {
+            return result;
+        }
         result = doom_dynamic_array_get_struct(&da_new_struct, da_new);
         if (result != DOOM_SUCCESS) {
             return result; 
@@ -1961,7 +2004,7 @@ int doom_dynamic_array_pop_back( doom_dynamic_array * da ) {
     }
     int result = DOOM_SUCCESS;
     doom_dynamic_array_struct da_struct;
-    result = doom_dynamic_array_get_struct(&da_struct, da);
+    result = doom_dynamic_array_get_struct(&da_struct, *da);
     if (result != DOOM_SUCCESS) {
         return result;
     }
@@ -2038,7 +2081,7 @@ int doom_dynamic_array_pop_front( doom_dynamic_array * da ) {
     }
 
     memmove(da_struct._array, da_struct._array+(*da_struct._sizeof_elem),
-            (*da_struct._sizeof_elem) * (*da_struct._array_size));
+            (*da_struct._sizeof_elem) * (*da_struct._array_size - 1));
     *da_struct._array_size-=1;
 
     return result;
@@ -2087,7 +2130,6 @@ int    doom_list_init( doom_list ** list, uint64_t data_size );
 int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) );
 void   doom_list_deinit( doom_list * list );
 void   doom_list_deinit_ptr( doom_list ** list );
-void   doom_list_deinit( doom_list * list );
 int    doom_list_push_front( doom_list * list, void * value );
 int    doom_list_push_back( doom_list * list, void * value );
 int    doom_list_pop_front( doom_list * list );
@@ -2115,11 +2157,9 @@ int    doom_list_remove_at( doom_list * list, uint64_t index );
 #endif /* ifdef DOOMSDAY_C_ENABLE_COMPILER_MAGIC */
 
 #define DOOM_LIST_FOREACH(elem, list, elem_type) \
-    elem=*(elem_type *)list->first->payload; \
-    for (doom_list_node * node_ptr=list->first; \
-         node_ptr != NULL; \
-         node_ptr = node_ptr->next, \
-         (node_ptr!=NULL) ? elem=*(elem_type*)node_ptr->payload : elem \
+    for (doom_list_node * node_ptr=(list)->first; \
+         node_ptr != NULL && (elem=*(elem_type*)node_ptr->payload, 1); \
+         node_ptr = node_ptr->next \
          )
 
 /*****************************************************************************/
@@ -2235,7 +2275,7 @@ int doom_list_node_insert_before( doom_list_node * ref, doom_list_node * node ) 
         return DOOM_ARGUMENT_IS_NULL;
     }
     if (ref->prev != NULL) {
-        aux = ref->next;
+        aux = ref->prev;
     }
     ref->prev = node;
     node->next = ref;
@@ -2277,7 +2317,7 @@ doom_list * doom_list_new_alloc( uint64_t data_size, void *(*custom_allocator)(s
 int doom_list_init( doom_list ** list, uint64_t data_size ) {
     doom_list * list_aux;
     list_aux = (doom_list *)DOOMSDAY_C_DEFAULT_ALLOCATOR(sizeof(doom_list));
-    if (list == NULL) {
+    if (list_aux == NULL) {
         return -1;
     }
     list_aux->_allocator = DOOMSDAY_C_DEFAULT_ALLOCATOR;
@@ -2293,7 +2333,7 @@ int doom_list_init( doom_list ** list, uint64_t data_size ) {
 int    doom_list_init_alloc( doom_list ** list, uint64_t data_size, void *(*custom_allocator)(size_t), void (*custom_deallocator)(void *) ) {
     doom_list * list_aux;
     list_aux = (doom_list *)custom_allocator(sizeof(doom_list));
-    if (list == NULL) {
+    if (list_aux == NULL) {
         return -1;
     }
     list_aux->_allocator = custom_allocator; 
@@ -2401,6 +2441,9 @@ int doom_list_pop_front( doom_list * list ) {
     aux = list->first;
     list->first = list->first->next;
     doom_list_node_deinit(aux, list->_deallocator);
+    if (list->first != NULL) {
+        list-> first->prev = NULL;
+    }
     list->_size--;
     if (list->_size == 0) {
         list->last = NULL;
@@ -2419,6 +2462,9 @@ int doom_list_pop_back( doom_list * list ) {
     aux = list->last;
     list->last = list->last->prev;
     doom_list_node_deinit(aux, list->_deallocator);
+    if (list->last != NULL) {
+        list->last->next = NULL;
+    }
     list->_size--;
     if (list->_size == 0) {
         list->first = NULL;
@@ -2450,7 +2496,7 @@ void * doom_list_at( doom_list * list, uint64_t index ) {
     if (list == NULL) {
         return NULL;
     }
-    if (index < 0 || index >= list->_size) {
+    if (index >= list->_size) {
         return NULL;
     }
     if (index <= list->_size/2) {
@@ -2474,7 +2520,7 @@ int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
     if (value == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
     }
-    if (index < 0 || index > list->_size) {
+    if (index > list->_size) {
         return DOOM_INVALID_ARGUMENT;
     }
 
@@ -2492,11 +2538,13 @@ int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
     } 
     result = doom_list_node_init(payload_ptr, list->_data_size, list->_allocator);
     if (result != DOOM_SUCCESS) {
-        return DOOM_SUCCESS;
+        doom_list_node_deinit(payload_ptr, list->_deallocator);
+        return result;
     }
     result = doom_list_node_assign(payload_ptr, value, list->_data_size);
     if (result != DOOM_SUCCESS) {
-        return DOOM_SUCCESS;
+        doom_list_node_deinit(payload_ptr, list->_deallocator);
+        return result;
     }
 
     index = index-1;
@@ -2514,6 +2562,7 @@ int doom_list_insert_at( doom_list * list, void * value, uint64_t index) {
     }
     result = doom_list_node_insert_after(node_ptr, payload_ptr);
     if (result != DOOM_SUCCESS) {
+        doom_list_node_deinit(payload_ptr, list->_deallocator);
         return result;
     }
 
@@ -2525,7 +2574,7 @@ int doom_list_remove_at( doom_list * list, uint64_t index) {
     if (list == NULL) {
         return DOOM_ARGUMENT_IS_NULL;
     } 
-    if (index < 0 || index >= list->_size) {
+    if (index >= list->_size) {
         return DOOM_INVALID_ARGUMENT;
     }
 
@@ -2590,13 +2639,13 @@ int doom_list_remove_at( doom_list * list, uint64_t index) {
         default: doom_dynamic_array_push_back\
         )(doom_collection)
 
-#define doom_push_front(doom_collection) _Generic((doom_collection)\
+#define doom_push_front(doom_collection) _Generic((doom_collection),\
         doom_list *: doom_list_push_front,\
         default: doom_dynamic_array_push_front\
         )(doom_collection)
 
-#define doom_at(doom_collection, index) _Generic((doom_collection)\
-        doom_list *: doom_list_at\
+#define doom_at(doom_collection, index) _Generic((doom_collection),\
+        doom_list *: doom_list_at,\
         default: doom_dynamic_array_at\
         )(doom_collection, index)
 
